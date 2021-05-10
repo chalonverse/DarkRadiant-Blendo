@@ -31,6 +31,30 @@ namespace
     }
 }
 
+// !!SPECIAL BLENDO HACK!!
+// Define the names of materials here to force DarkRadiant to always render them translucent
+// (we want to reserve this for certain tool textures, mostly)
+const auto translucentToolTextures = {
+    "textures/common/aas_solid",
+    "textures/common/aasobstacle",
+    "textures/common/actor_clip",
+    "textures/common/clip",
+    "textures/common/confined",
+    "textures/common/monster_clip",
+    "textures/common/noclimb",
+    "textures/common/noclimb_actorclip",
+    "textures/common/noclimb_playerclip",
+    "textures/common/nodraw",
+    "textures/common/nodrawsolid",
+    "textures/common/player_clip",
+    "textures/common/shadow",
+    "textures/common/shadow_cheap",
+    "textures/common/shadow_sunlight",
+    "textures/common/trigmulti",
+    "textures/common/trigonce",
+    "textures/common/visportal"
+};
+
 // Triplet of diffuse, bump and specular shaders
 struct OpenGLShader::DBSTriplet
 {
@@ -575,6 +599,11 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
         }
     }
 
+    // Prep for incoming Blendo hack
+    auto begin = translucentToolTextures.begin();
+    auto end = translucentToolTextures.end();
+    auto materialName = _material->getName();
+
     // If this is a purely blend material (no DBS layers), set the editor blend
     // mode from the first blend layer.
 	// greebo: Hack to let "shader not found" textures be handled as diffusemaps
@@ -586,6 +615,17 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
 		BlendFunc bf = allLayers[0]->getBlendFunc();
 		pass.m_blend_src = bf.src;
 		pass.m_blend_dst = bf.dest;
+    }
+
+    // !!SPECIAL BLENDO HACK!!
+    // Forces certain textures to show up translucent so I don't lose my mind building vents
+    else if (!hasDiffuseLayer && std::find(begin, end, materialName) != end)
+    {
+        pass.setRenderFlag(RENDER_BLEND);
+        pass.setSortPosition(OpenGLState::SORT_TRANSLUCENT);
+        BlendFunc* bf = new BlendFunc(GL_DST_COLOR, GL_ZERO);
+        pass.m_blend_src = bf->src;
+        pass.m_blend_dst = bf->dest;
     }
 }
 
