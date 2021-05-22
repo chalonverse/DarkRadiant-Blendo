@@ -40,9 +40,9 @@ const auto translucentToolTextures = {
     "textures/common/clip",
     "textures/common/confined",
     "textures/common/monster_clip",
-    "textures/common/noclimb",
-    "textures/common/noclimb_actorclip",
-    "textures/common/noclimb_playerclip",
+    "textures/common/climbclip",
+    "textures/common/climbclip_actorclip",
+    "textures/common/climbclip_playerclip",
     "textures/common/nodraw",
     "textures/common/nodrawsolid",
     "textures/common/player_clip",
@@ -483,7 +483,7 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
 {
     bool hasDiffuseLayer = false;
 
-    // Determine alphatest from first diffuse layer
+    // Determine alphatest and colouration from first diffuse layer
     const IShaderLayerVector allLayers = _material->getAllLayers();
 
     for (IShaderLayerVector::const_iterator i = allLayers.begin();
@@ -492,6 +492,9 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
     {
         const IShaderLayer::Ptr& layer = *i;
 
+        // Make sure we had at least one evaluation call to fill the material registers
+        layer->evaluateExpressions(0);
+
         if (layer->getType() == IShaderLayer::DIFFUSE)
         {
             hasDiffuseLayer = true;
@@ -499,8 +502,15 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
             if (layer->getAlphaTest() > 0)
             {
                 applyAlphaTestToPass(pass, layer->getAlphaTest());
-                break;
             }
+
+            pass.setColour(layer->getColour());
+
+            // Set the diffuse layer as a stage so that it gets evaluated properly
+            // (normally only lit shaders are evaluated at render time, but we want diffuse colouration to happen in unlit view)
+            pass.stage0 = layer;
+
+            break;
         }
     }
 
@@ -508,6 +518,11 @@ void OpenGLShader::determineBlendModeForEditorPass(OpenGLState& pass)
     auto begin = translucentToolTextures.begin();
     auto end = translucentToolTextures.end();
     auto materialName = _material->getName();
+
+    if (!hasDiffuseLayer)
+    {
+        pass.setColour(Colour4::WHITE());
+    }
 
     // If this is a purely blend material (no DBS layers), set the editor blend
     // mode from the first blend layer.
@@ -563,9 +578,6 @@ void OpenGLShader::constructEditorPreviewPassFromMaterial()
 
     // Set up blend properties
     determineBlendModeForEditorPass(previewPass);
-
-    // Set the GL color to white
-    previewPass.setColour(Colour4::WHITE());
 
     // Sort position
     if (_material->getSortRequest() >= Material::SORT_DECAL)
