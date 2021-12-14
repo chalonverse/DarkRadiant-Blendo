@@ -255,7 +255,7 @@ void SpeakerNode::renderSolid(RenderableCollector& collector,
     // radii" option is set
 	if (isSelected() || EntitySettings::InstancePtr()->getShowAllSpeakerRadii())
     {
-		collector.addRenderable(*getFillShader(), _renderableRadii, localToWorld());
+		collector.addRenderable(*getTranslucentShader(), _renderableRadii, localToWorld());
     }
 }
 void SpeakerNode::renderWireframe(RenderableCollector& collector,

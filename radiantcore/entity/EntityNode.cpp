@@ -393,11 +393,13 @@ void EntityNode::acquireShaders(const RenderSystemPtr& renderSystem)
     {
         _fillShader = renderSystem->capture(_spawnArgs.getEntityClass()->getFillShader());
         _wireShader = renderSystem->capture(_spawnArgs.getEntityClass()->getWireShader());
+        _translucentShader = renderSystem->capture(_spawnArgs.getEntityClass()->getTranslucentShader());
     }
     else
     {
         _fillShader.reset();
         _wireShader.reset();
+        _translucentShader.reset();
     }
 }
 
@@ -453,6 +455,11 @@ const ShaderPtr& EntityNode::getWireShader() const
 const ShaderPtr& EntityNode::getFillShader() const
 {
 	return _fillShader;
+}
+
+const ShaderPtr& EntityNode::getTranslucentShader() const
+{
+    return _translucentShader;
 }
 
 void EntityNode::onPostUndo()

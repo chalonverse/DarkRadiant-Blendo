@@ -185,6 +185,9 @@ public:
     /// Get the shader used for rendering this entity class in filled mode.
     virtual const std::string& getFillShader() const = 0;
 
+    // 
+    virtual const std::string& getTranslucentShader() const = 0;
+
 
     /* ENTITY CLASS ATTRIBUTES */
 

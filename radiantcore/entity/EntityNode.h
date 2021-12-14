@@ -73,9 +73,10 @@ protected:
 	// This entity's main direction, usually determined by the angle/rotation keys
 	Vector3 _direction;
 
-	// The wireframe / solid shaders as determined by the entityclass
+	// The wireframe / solid / translucent shaders as determined by the entityclass
 	ShaderPtr _fillShader;
 	ShaderPtr _wireShader;
+    ShaderPtr _translucentShader;
 
 	sigc::connection _eclassChangedConn;
 
@@ -159,6 +160,7 @@ public:
 
 	const ShaderPtr& getWireShader() const override;
 	const ShaderPtr& getFillShader() const;
+    const ShaderPtr& getTranslucentShader() const;
 
 	virtual void onPostUndo() override;
 	virtual void onPostRedo() override;

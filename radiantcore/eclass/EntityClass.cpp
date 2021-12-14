@@ -14,6 +14,7 @@ namespace eclass
 
 const std::string EntityClass::DefaultWireShader("<0.3 0.3 1>");
 const std::string EntityClass::DefaultFillShader("(0.3 0.3 1)");
+const std::string EntityClass::DefaultTranslucentShader("$TRANSLUCENT");
 const Vector3 EntityClass::DefaultEntityColour(0.3, 0.3, 1);
 const EntityClassAttribute EntityClass::_emptyAttribute("", "", "");
 
@@ -146,6 +147,12 @@ const std::string& EntityClass::getFillShader() const
 {
     // Use a fallback shader colour in case we don't have anything
     return !_fillShader.empty() ? _fillShader : DefaultFillShader;
+}
+
+const std::string& EntityClass::getTranslucentShader() const
+{
+    // Use a fallback shader colour in case we don't have anything
+    return !_translucentShader.empty() ? _translucentShader : DefaultTranslucentShader;
 }
 
 /* ATTRIBUTES */

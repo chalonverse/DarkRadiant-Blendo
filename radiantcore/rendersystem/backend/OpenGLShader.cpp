@@ -51,7 +51,8 @@ const auto translucentToolTextures = {
     "textures/common/shadow_sunlight",
     "textures/common/trigmulti",
     "textures/common/trigonce",
-    "textures/common/visportal"
+    "textures/common/visportal",
+    "textures/common/nowalk"
 };
 
 // Triplet of diffuse, bump and specular shaders
@@ -818,6 +819,16 @@ void OpenGLShader::construct()
             {
               state.setRenderFlags(RENDER_DEPTHTEST | RENDER_DEPTHWRITE);
               state.setSortPosition(OpenGLState::SORT_FULLBRIGHT);
+            }
+            else if (_name == "$TRANSLUCENT")
+            {
+                // Hacky blendo code to draw 'translucent' speaker volumes
+                state.setColour(0, 1, 0, 1);
+                state.setRenderFlag(RENDER_FILL | RENDER_BLEND | RENDER_DEPTHTEST | RENDER_DEPTHWRITE);
+                state.setSortPosition(OpenGLState::SORT_TRANSLUCENT);
+                BlendFunc* bf = new BlendFunc(GL_DST_COLOR, GL_ZERO);
+                state.m_blend_src = bf->src;
+                state.m_blend_dst = bf->dest;
             }
             else if (_name == "$CAM_HIGHLIGHT")
             {
