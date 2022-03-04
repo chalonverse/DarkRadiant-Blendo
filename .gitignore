@@ -88,3 +88,6 @@ Makefile.in
 windeps*.7z
 /packages
 /windeps
+/install/gl
+/install/scripts/commands
+/install/unins000.dat
