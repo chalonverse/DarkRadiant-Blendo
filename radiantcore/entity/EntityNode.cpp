@@ -429,7 +429,7 @@ void EntityNode::acquireShaders(const RenderSystemPtr& renderSystem)
     if (renderSystem)
     {
         const auto& colour = _spawnArgs.getEntityClass()->getColour();
-        _fillShader = renderSystem->capture(ColourShaderType::CameraSolid, colour);
+        _fillShader = renderSystem->capture(ColourShaderType::CameraTranslucent, colour);
         _wireShader = renderSystem->capture(ColourShaderType::OrthoviewSolid, colour);
         _colourShader = renderSystem->capture(ColourShaderType::CameraAndOrthoview, colour);
         _textRenderer = renderSystem->captureTextRenderer(IGLFont::Style::Sans, 14);

@@ -64,6 +64,10 @@ void ColourShader::construct()
         state.setRenderFlag(RENDER_BLEND);
         state.setSortPosition(OpenGLState::SORT_TRANSLUCENT);
 
+        BlendFunc* bf = new BlendFunc(GL_DST_COLOR, GL_ZERO);
+        state.m_blend_src = bf->src;
+        state.m_blend_dst = bf->dest;
+
         enableViewType(RenderViewType::Camera);
         break;
     }
