@@ -5,6 +5,7 @@ add_executable(drtest
                Brush.cpp
                Camera.cpp
                ColourSchemes.cpp
+               ContinuousBuffer.cpp
                CSG.cpp
                Entity.cpp
                Favourites.cpp
@@ -27,11 +28,13 @@ add_executable(drtest
                ModelExport.cpp
                ModelScale.cpp
                Models.cpp
+               Particles.cpp
                PatchIterators.cpp
                PatchWelding.cpp
                PointTrace.cpp
                Prefabs.cpp
                Renderer.cpp
+               SceneNode.cpp
                SelectionAlgorithm.cpp
                Selection.cpp
                TextureManipulation.cpp

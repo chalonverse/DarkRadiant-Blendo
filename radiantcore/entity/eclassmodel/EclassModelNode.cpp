@@ -29,9 +29,6 @@ EclassModelNode::EclassModelNode(const EclassModelNode& other) :
 
 EclassModelNode::~EclassModelNode()
 {
-    removeKeyObserver("origin", _originKey);
-    removeKeyObserver("rotation", _rotationObserver);
-    removeKeyObserver("angle", _angleObserver);
 }
 
 EclassModelNodePtr EclassModelNode::Create(const IEntityClassPtr& eclass)
@@ -46,14 +43,14 @@ void EclassModelNode::construct()
 {
 	EntityNode::construct();
 
-    _rotationObserver.setCallback(std::bind(&RotationKey::rotationChanged, &_rotationKey, std::placeholders::_1));
-	_angleObserver.setCallback(std::bind(&RotationKey::angleChanged, &_rotationKey, std::placeholders::_1));
-
     _rotation.setIdentity();
 
-    addKeyObserver("angle", _angleObserver);
-	addKeyObserver("rotation", _rotationObserver);
-    addKeyObserver("origin", _originKey);
+    // Observe position and orientation spawnargs
+    static_assert(std::is_base_of<sigc::trackable, OriginKey>::value);
+    static_assert(std::is_base_of<sigc::trackable, RotationKey>::value);
+    observeKey("angle", sigc::mem_fun(_rotationKey, &RotationKey::angleChanged));
+	observeKey("rotation", sigc::mem_fun(_rotationKey, &RotationKey::rotationChanged));
+    observeKey("origin", sigc::mem_fun(_originKey, &OriginKey::onKeyValueChanged));
 }
 
 // Snappable implementation
@@ -68,31 +65,28 @@ const AABB& EclassModelNode::localAABB() const
 	return _localAABB;
 }
 
-void EclassModelNode::renderSolid(RenderableCollector& collector, const VolumeTest& volume) const
+void EclassModelNode::onPreRender(const VolumeTest& volume)
 {
-	EntityNode::renderSolid(collector, volume);
+    EntityNode::onPreRender(volume);
 
     if (isSelected())
-	{
-		_renderOrigin.render(collector, volume, localToWorld());
-	}
-}
-
-void EclassModelNode::renderWireframe(RenderableCollector& collector, const VolumeTest& volume) const
-{
-	EntityNode::renderWireframe(collector, volume);
-
-	if (isSelected())
-	{
-		_renderOrigin.render(collector, volume, localToWorld());
-	}
+    {
+        _renderOrigin.update(_pivotShader);
+    }
 }
 
 void EclassModelNode::setRenderSystem(const RenderSystemPtr& renderSystem)
 {
 	EntityNode::setRenderSystem(renderSystem);
 
-	_renderOrigin.setRenderSystem(renderSystem);
+    if (renderSystem)
+    {
+        _pivotShader = renderSystem->capture(BuiltInShaderType::Pivot);
+    }
+    else
+    {
+        _pivotShader.reset();
+    }
 }
 
 scene::INodePtr EclassModelNode::clone() const
@@ -107,9 +101,10 @@ scene::INodePtr EclassModelNode::clone() const
 void EclassModelNode::translate(const Vector3& translation)
 {
 	_origin += translation;
+    _renderOrigin.queueUpdate();
 }
 
-void EclassModelNode::rotate(const Quaternion& rotation) 
+void EclassModelNode::rotate(const Quaternion& rotation)
 {
 	_rotation.rotate(rotation);
 }
@@ -117,6 +112,7 @@ void EclassModelNode::rotate(const Quaternion& rotation)
 void EclassModelNode::_revertTransform()
 {
 	_origin = _originKey.get();
+    _renderOrigin.queueUpdate();
 	_rotation = _rotationKey.m_rotation;
 }
 
@@ -160,12 +156,16 @@ const Vector3& EclassModelNode::getUntransformedOrigin()
     return _originKey.get();
 }
 
+const Vector3& EclassModelNode::getWorldPosition() const
+{
+    return _origin;
+}
+
 void EclassModelNode::updateTransform()
 {
-	localToParent() = Matrix4::getIdentity();
-	localToParent().translateBy(_origin);
+    _renderOrigin.queueUpdate();
 
-	localToParent().multiplyBy(_rotation.getMatrix4());
+    setLocalToParent(Matrix4::getTranslation(_origin) * _rotation.getMatrix4());
 
 	EntityNode::transformChanged();
 }
@@ -186,6 +186,20 @@ void EclassModelNode::angleChanged()
 {
 	_angle = _angleKey.getValue();
 	updateTransform();
+}
+
+void EclassModelNode::onSelectionStatusChange(bool changeGroupStatus)
+{
+    EntityNode::onSelectionStatusChange(changeGroupStatus);
+
+    if (isSelected())
+    {
+        _renderOrigin.queueUpdate();
+    }
+    else
+    {
+        _renderOrigin.clear();
+    }
 }
 
 } // namespace entity

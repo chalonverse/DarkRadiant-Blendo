@@ -170,64 +170,15 @@ void selectAllOfType(const cmd::ArgumentList& args)
 	SceneChangeNotify();
 }
 
-class HideSubgraphWalker :
-	public scene::NodeVisitor
-{
-public:
-	bool pre(const scene::INodePtr& node)
-	{
-        if (node->supportsStateFlag(scene::Node::eHidden))
-        {
-		    node->enable(scene::Node::eHidden);
-        }
-
-		return true;
-	}
-};
-
-class ShowSubgraphWalker :
-	public scene::NodeVisitor
-{
-public:
-	bool pre(const scene::INodePtr& node)
-	{
-        if (node->supportsStateFlag(scene::Node::eHidden))
-        {
-            node->disable(scene::Node::eHidden);
-        }
-
-		return true;
-	}
-};
-
 inline void hideSubgraph(const scene::INodePtr& node, bool hide)
 {
 	if (hide)
 	{
-		HideSubgraphWalker walker;
-		node->traverse(walker);
+        scene::hideSubgraph(node);
 	}
 	else
 	{
-		ShowSubgraphWalker walker;
-		node->traverse(walker);
-	}
-}
-
-inline void hideNode(const scene::INodePtr& node, bool hide)
-{
-    if (!node->supportsStateFlag(scene::Node::eHidden))
-    {
-        return;
-    }
-
-	if (hide)
-	{
-		node->enable(scene::Node::eHidden);
-	}
-	else
-	{
-		node->disable(scene::Node::eHidden);
+        scene::showSubgraph(node);
 	}
 }
 
@@ -332,7 +283,7 @@ public:
 	{}
 
 	bool pre(const scene::INodePtr& node) {
-		hideNode(node, _hide);
+		scene::setNodeHidden(node, _hide);
 		return true;
 	}
 };
@@ -370,7 +321,7 @@ public:
 		Entity* entity = Node_getEntity(node);
 
 		// Check if we have a selectable
-		ISelectablePtr selectable = Node_getSelectable(node);
+		ISelectablePtr selectable = scene::node_cast<ISelectable>(node);
 
 		if (selectable)
 		{
@@ -444,7 +395,7 @@ public:
 		Entity* entity = Node_getEntity(node);
 
 		// Check if we have a selectable
-		ISelectablePtr selectable = Node_getSelectable(node);
+		ISelectablePtr selectable = scene::node_cast<ISelectable>(node);
 
 		if (selectable != NULL)
 		{
@@ -558,7 +509,7 @@ public:
 		// Don't traverse hidden nodes
 		if (!node->visible()) return false;
 
-		ISelectablePtr selectable = Node_getSelectable(node);
+		ISelectablePtr selectable = scene::node_cast<ISelectable>(node);
 
 		// ignore worldspawn
         Entity* entity = Node_getEntity(node);
@@ -952,7 +903,7 @@ void floorNode(const scene::INodePtr& node)
 	{
 		Vector3 translation = finder.getIntersection() - objectOrigin;
 
-		ITransformablePtr transformable = Node_getTransformable(node);
+		ITransformablePtr transformable = scene::node_cast<ITransformable>(node);
 
 		if (transformable)
 		{
@@ -987,7 +938,7 @@ void registerCommands()
     GlobalCommandSystem().addCommand("InvertSelection", invertSelection);
     GlobalCommandSystem().addCommand("SelectInside", selectInside,
         { cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL, cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL });
-    GlobalCommandSystem().addCommand("SelectFullyInside", selectFullyInside, 
+    GlobalCommandSystem().addCommand("SelectFullyInside", selectFullyInside,
         { cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL, cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL });
 	GlobalCommandSystem().addCommand("SelectTouching", selectTouching,
         { cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL, cmd::ARGTYPE_VECTOR3 | cmd::ARGTYPE_OPTIONAL });

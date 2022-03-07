@@ -15,16 +15,11 @@ public:
 };
 typedef std::shared_ptr<ITransformNode> ITransformNodePtr;
 
-inline ITransformNodePtr Node_getTransformNode(const scene::INodePtr& node)
-{
-	return std::dynamic_pointer_cast<ITransformNode>(node);
-}
-
 /// An ITransformNode which can provide non-const access to its transform matrix
 class IMatrixTransform: public ITransformNode
 {
 public:
 
-    /// Return a modifiable reference to a contained transformation matrix
-	virtual Matrix4& localToParent() = 0;
+    /// Set the value of the contained transformation matrix
+	virtual void setLocalToParent(const Matrix4& localToParent) = 0;
 };

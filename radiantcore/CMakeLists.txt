@@ -12,6 +12,7 @@ add_library(radiantcore MODULE
             brush/FaceInstance.cpp
             brush/FacePlane.cpp
             brush/FixedWinding.cpp
+            brush/RenderableBrushVertices.cpp
             brush/TextureMatrix.cpp
             brush/TextureProjection.cpp
             brush/Winding.cpp
@@ -26,6 +27,7 @@ add_library(radiantcore MODULE
             eclass/EntityClass.cpp
             eclass/EClassColourManager.cpp
             eclass/EClassManager.cpp
+            eclass/EClassParser.cpp
             entity/AngleKey.cpp
             entity/AttachmentData.cpp
             entity/curve/CurveCatmullRom.cpp
@@ -33,7 +35,7 @@ add_library(radiantcore MODULE
             entity/curve/CurveEditInstance.cpp
             entity/curve/CurveNURBS.cpp
             entity/SpawnArgs.cpp
-            entity/doom3group/Doom3GroupNode.cpp
+            entity/doom3group/StaticGeometryNode.cpp
             entity/eclassmodel/EclassModelNode.cpp
             entity/EntityModule.cpp
             entity/EntityNode.cpp
@@ -41,12 +43,14 @@ add_library(radiantcore MODULE
             entity/generic/GenericEntityNode.cpp
             entity/KeyValue.cpp
             entity/KeyValueObserver.cpp
-            entity/light/Light.cpp
             entity/light/LightNode.cpp
             entity/light/Renderables.cpp
             entity/ModelKey.cpp
             entity/NameKeyObserver.cpp
             entity/NamespaceManager.cpp
+            entity/RenderableArrow.cpp
+            entity/RenderableEntityBox.cpp
+            entity/RenderableEntityName.cpp
             entity/RotationKey.cpp
             entity/RotationMatrix.cpp
             entity/ShaderParms.cpp
@@ -191,6 +195,7 @@ add_library(radiantcore MODULE
             modulesystem/ModuleLoader.cpp
             modulesystem/ModuleRegistry.cpp
             particles/ParticleDef.cpp
+            particles/ParticleLoader.cpp
             particles/ParticleNode.cpp
             particles/ParticleParameter.cpp
             particles/ParticlesManager.cpp
@@ -210,11 +215,20 @@ add_library(radiantcore MODULE
             rendersystem/backend/glprogram/GenericVFPProgram.cpp
             rendersystem/backend/glprogram/GLSLProgramBase.cpp
             rendersystem/backend/glprogram/GLSLBumpProgram.cpp
+            rendersystem/backend/glprogram/GLSLCubeMapProgram.cpp
             rendersystem/backend/glprogram/GLSLDepthFillProgram.cpp
             rendersystem/backend/glprogram/GLSLDepthFillAlphaProgram.cpp
+            rendersystem/backend/BuiltInShader.cpp
+            rendersystem/backend/ColourShader.cpp
+            rendersystem/backend/LightInteractions.cpp
+            rendersystem/backend/SceneRenderer.cpp
+            rendersystem/backend/FullBrightRenderer.cpp
+            rendersystem/backend/LightingModeRenderer.cpp
+            rendersystem/backend/ObjectRenderer.cpp
             rendersystem/backend/OpenGLShader.cpp
             rendersystem/backend/OpenGLShaderPass.cpp
             rendersystem/backend/DepthFillPass.cpp
+            rendersystem/backend/InteractionPass.cpp
             rendersystem/debug/SpacePartitionRenderer.cpp
             rendersystem/GLFont.cpp
             rendersystem/OpenGLModule.cpp
@@ -246,7 +260,6 @@ add_library(radiantcore MODULE
             selection/manipulators/ManipulatorComponents.cpp
             selection/manipulators/ModelScaleManipulator.cpp
             selection/manipulators/RotateManipulator.cpp
-            selection/manipulators/ScaleManipulator.cpp
             selection/manipulators/TranslateManipulator.cpp
             selection/RadiantSelectionSystem.cpp
             selection/SelectedNodeList.cpp

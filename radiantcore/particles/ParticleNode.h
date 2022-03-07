@@ -35,13 +35,15 @@ public:
 	const AABB& localAABB() const override;
 	std::size_t getHighlightFlags() override;
 
-	void renderSolid(RenderableCollector& collector, const VolumeTest& volume) const override;
-	void renderWireframe(RenderableCollector& collector, const VolumeTest& volume) const override;
+	void onPreRender(const VolumeTest& volume) override;
+	void renderHighlights(IRenderableCollector& collector, const VolumeTest& volume) override;
 
 	void setRenderSystem(const RenderSystemPtr& renderSystem) override;
 
 	// ITransformNode
 	Matrix4 localToParent() const override;
+
+    void onRemoveFromScene(scene::IMapRootNode& root) override;
 
 private:
 	void update(const VolumeTest& viewVolume) const;

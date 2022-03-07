@@ -137,8 +137,14 @@ void Clipper::getPlanePoints(Vector3 planepts[3], const AABB& bounds) const {
 	}
 }
 
-void Clipper::setClipPlane(const Plane3& plane) 
+const Plane3& Clipper::getClipPlane()
 {
+    return _clipPlane;
+}
+
+void Clipper::setClipPlane(const Plane3& plane)
+{
+    _clipPlane = plane;
 	algorithm::setBrushClipPlane(plane);
 }
 
@@ -298,4 +304,4 @@ void Clipper::flipClipperCmd(const cmd::ArgumentList& args) {
 }
 
 // Define the static Clipper module
-module::StaticModule<Clipper> clipperModule;
+module::StaticModuleRegistration<Clipper> clipperModule;

@@ -20,6 +20,7 @@
 #include "tools/CameraMoveTool.h"
 #include "tools/MoveViewTool.h"
 #include "tools/MeasurementTool.h"
+#include "debugging/ScopedDebugTimer.h"
 
 #include <functional>
 
@@ -71,49 +72,38 @@ XYWndManager::XYWndManager() :
  */
 void XYWndManager::restoreState()
 {
-	xml::NodeList views = GlobalRegistry().findXPath(RKEY_XYVIEW_ROOT + "//views");
+	auto views = GlobalRegistry().findXPath(RKEY_XYVIEW_ROOT + "//views");
 
-	if (!views.empty())
+    if (views.empty()) return;
+
+	// Find all <view> tags under the first found <views> tag
+	auto viewList = views[0].getNamedChildren("view");
+
+	for (const auto& node : viewList)
 	{
-		// Find all <view> tags under the first found <views> tag
-		xml::NodeList viewList = views[0].getNamedChildren("view");
+		// Assemble the XPath for the viewstate
+		std::string path = RKEY_XYVIEW_ROOT +
+			"/views/view[@name='" + node.getAttributeValue("name") + "']";
 
-		for (xml::NodeList::const_iterator i = viewList.begin();
-			 i != viewList.end();
-			 ++i)
+		const std::string typeStr = node.getAttributeValue("type");
+
+		EViewType type = XY;
+
+		if (typeStr == "YZ")
 		{
-			// Assemble the XPath for the viewstate
-			std::string path = RKEY_XYVIEW_ROOT +
-				"/views/view[@name='" + i->getAttributeValue("name") + "']";
-
-			const std::string typeStr = i->getAttributeValue("type");
-
-			EViewType type = XY;
-
-			if (typeStr == "YZ")
-			{
-				type = YZ;
-			}
-			else if (typeStr == "XZ")
-			{
-				type = XZ;
-			}
-			else
-			{
-				type = XY;
-			}
-
-			// Create the view and restore the size
-			XYWndPtr newWnd = createFloatingOrthoView(type);
+			type = YZ;
 		}
-	}
-	else
-	{
-		// Create at least one XYView, if no view info is found
-		rMessage() << "XYWndManager: No xywindow information found in XMLRegistry, creating default view.\n";
+		else if (typeStr == "XZ")
+		{
+			type = XZ;
+		}
+		else
+		{
+			type = XY;
+		}
 
-		// Create a default OrthoView
-		createFloatingOrthoView(XY);
+		// Create the view and restore the size
+		createFloatingOrthoView(type);
 	}
 }
 
@@ -125,10 +115,10 @@ void XYWndManager::saveState()
 	// Create a new node
 	std::string rootNodePath(RKEY_XYVIEW_ROOT + "/views");
 
-	for (XYWndMap::iterator i = _xyWnds.begin(); i != _xyWnds.end(); ++i)
+	for (auto& [_, view] : _xyWnds)
 	{
 		// Save each XYView state to the registry
-		FloatingOrthoViewPtr floatingView = std::dynamic_pointer_cast<FloatingOrthoView>(i->second);
+		auto floatingView = std::dynamic_pointer_cast<FloatingOrthoView>(view);
 
 		if (floatingView)
 		{
@@ -137,11 +127,10 @@ void XYWndManager::saveState()
 	}
 }
 
-// Free the allocated XYViews from the heap
 void XYWndManager::destroyViews()
 {
 	// Discard the whole list
-	for (XYWndMap::iterator i = _xyWnds.begin(); i != _xyWnds.end(); /* in-loop incr.*/)
+	for (auto i = _xyWnds.begin(); i != _xyWnds.end(); /* in-loop incr.*/)
 	{
 		// Extract the pointer to prevent the destructor from firing
 		XYWndPtr candidate = i->second;
@@ -159,7 +148,7 @@ void XYWndManager::destroyViews()
 	_activeXY = XYWndPtr();
 }
 
-void XYWndManager::registerCommands() 
+void XYWndManager::registerCommands()
 {
 	GlobalCommandSystem().addCommand("NewOrthoView", std::bind(&XYWndManager::createXYFloatingOrthoView, this, std::placeholders::_1));
 	GlobalCommandSystem().addCommand("NextView", std::bind(&XYWndManager::toggleActiveView, this, std::placeholders::_1));
@@ -171,6 +160,8 @@ void XYWndManager::registerCommands()
 	GlobalCommandSystem().addCommand("CenterXYViews", std::bind(&XYWndManager::splitViewFocus, this, std::placeholders::_1));
 	GlobalCommandSystem().addCommand("CenterXYView", std::bind(&XYWndManager::focusActiveView, this, std::placeholders::_1));
 	GlobalCommandSystem().addCommand("Zoom100", std::bind(&XYWndManager::zoom100, this, std::placeholders::_1));
+	GlobalCommandSystem().addCommand("RunBenchmark", std::bind(&XYWndManager::runBenchmark, this, std::placeholders::_1), 
+        { cmd::ARGTYPE_INT | cmd::ARGTYPE_OPTIONAL });
 
 	GlobalEventManager().addRegistryToggle("ToggleCrosshairs", RKEY_SHOW_CROSSHAIRS);
 	GlobalEventManager().addRegistryToggle("ToggleGrid", RKEY_SHOW_GRID);
@@ -314,7 +305,7 @@ void XYWndManager::updateAllViews(bool force)
         {
             i.second->forceRedraw();
         }
-        else 
+        else
         {
             i.second->queueDraw();
         }
@@ -349,7 +340,7 @@ void XYWndManager::setOrigin(const Vector3& origin) {
 
 Vector3 XYWndManager::getActiveViewOrigin()
 {
-	if (!_activeXY) 
+	if (!_activeXY)
 	{
 		throw std::runtime_error("No active view found");
 	}
@@ -377,7 +368,7 @@ IOrthoView& XYWndManager::getViewByType(EViewType viewType)
 			return *pair.second;
 		}
 	}
-	
+
 	throw std::runtime_error("No matching view found");
 }
 
@@ -641,7 +632,7 @@ Vector3 XYWndManager::getFocusPosition()
 {
 	Vector3 position(0,0,0);
 
-	if (GlobalSelectionSystem().countSelected() != 0) 
+	if (GlobalSelectionSystem().countSelected() != 0)
 	{
 		position = GlobalSelectionSystem().getCurrentSelectionCenter();
 	}
@@ -758,8 +749,24 @@ void XYWndManager::foreachMouseTool(const std::function<void(const MouseToolPtr&
     GlobalMouseToolManager().getGroup(IMouseToolGroup::Type::OrthoView).foreachMouseTool(func);
 }
 
+void XYWndManager::runBenchmark(const cmd::ArgumentList& args)
+{
+    auto cam = GlobalCamera().getActiveCamWnd();
+
+    cam->getCamera().setCameraOrigin({ 2517, -4511, 713 });
+    cam->getCamera().setCameraAngles({ -2.1, 123.91, 0 });
+
+    int numRuns = args.empty() ? 1 : args[0].getInt();
+
+    ScopedDebugTimer timer("Camera refresh, " + string::to_string(numRuns) + " runs");
+    for (int i = 0; i < numRuns; ++i)
+    {
+        cam->getCamera().forceRedraw();
+    }
+}
+
 // Define the static GlobalXYWnd module
-module::StaticModule<XYWndManager> xyWndModule;
+module::StaticModuleRegistration<XYWndManager> xyWndModule;
 
 } // namespace
 

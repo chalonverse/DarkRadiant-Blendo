@@ -18,6 +18,7 @@
 #include <wx/sizer.h>
 #include <wx/menu.h>
 #include <wx/dcclient.h>
+#include <wx/textctrl.h>
 #include "../Bitmap.h"
 
 #include <fmt/format.h>
@@ -134,21 +135,24 @@ void RenderPreview::connectToolbarSignals()
 {
 	wxToolBar* toolbar = findNamedObject<wxToolBar>(_mainPanel, "RenderPreviewAnimToolbar");
 
-	toolbar->Connect(getToolBarToolByLabel(toolbar, "startTimeButton")->GetId(),
-		wxEVT_TOOL, wxCommandEventHandler(RenderPreview::onStartPlaybackClick), NULL, this);
-	toolbar->Connect(getToolBarToolByLabel(toolbar, "pauseTimeButton")->GetId(),
-		wxEVT_TOOL, wxCommandEventHandler(RenderPreview::onPausePlaybackClick), NULL, this);
-	toolbar->Connect(getToolBarToolByLabel(toolbar, "stopTimeButton")->GetId(),
-		wxEVT_TOOL, wxCommandEventHandler(RenderPreview::onStopPlaybackClick), NULL, this);
+	toolbar->Bind(wxEVT_TOOL, &RenderPreview::onStartPlaybackClick, this, getToolBarToolByLabel(toolbar, "startTimeButton")->GetId());
+	toolbar->Bind(wxEVT_TOOL, &RenderPreview::onPausePlaybackClick, this, getToolBarToolByLabel(toolbar, "pauseTimeButton")->GetId());
+	toolbar->Bind(wxEVT_TOOL, &RenderPreview::onStopPlaybackClick, this, getToolBarToolByLabel(toolbar, "stopTimeButton")->GetId());
 
-	toolbar->Connect(getToolBarToolByLabel(toolbar, "prevButton")->GetId(),
-		wxEVT_TOOL, wxCommandEventHandler(RenderPreview::onStepBackClick), NULL, this);
-	toolbar->Connect(getToolBarToolByLabel(toolbar, "nextButton")->GetId(),
-		wxEVT_TOOL, wxCommandEventHandler(RenderPreview::onStepForwardClick), NULL, this);
+	toolbar->Bind(wxEVT_TOOL, &RenderPreview::onStepBackClick, this, getToolBarToolByLabel(toolbar, "prevButton")->GetId());
+	toolbar->Bind(wxEVT_TOOL, &RenderPreview::onStepForwardClick, this, getToolBarToolByLabel(toolbar, "nextButton")->GetId());
+
+    // Connect the frame selector
+    auto frameSelector = getToolBarControlByName(toolbar, "FrameSelector")->GetControl();
+    frameSelector->SetWindowStyleFlag(wxTE_PROCESS_ENTER);
+    frameSelector->Bind(wxEVT_SPINCTRL, &RenderPreview::onFrameSelected, this);
+    frameSelector->Bind(wxEVT_TEXT_ENTER, &RenderPreview::onFrameConfirmed, this);
 }
 
 RenderPreview::~RenderPreview()
 {
+    _scene.reset();
+    _renderSystem.reset();
 	_timer.Stop();
 }
 
@@ -366,6 +370,8 @@ void RenderPreview::startPlayback()
 
 	toolbar->EnableTool(getToolBarToolByLabel(toolbar, "pauseTimeButton")->GetId(), true);
 	toolbar->EnableTool(getToolBarToolByLabel(toolbar, "stopTimeButton")->GetId(), true);
+
+    updateFrameSelector();
 }
 
 void RenderPreview::stopPlayback()
@@ -377,6 +383,8 @@ void RenderPreview::stopPlayback()
 
 	toolbar->EnableTool(getToolBarToolByLabel(toolbar, "pauseTimeButton")->GetId(), false);
 	toolbar->EnableTool(getToolBarToolByLabel(toolbar, "stopTimeButton")->GetId(), false);
+
+    updateFrameSelector();
 
     queueDraw();
 }
@@ -440,6 +448,8 @@ bool RenderPreview::drawPreview()
 
     util::ScopedBoolLock lock(_renderingInProgress);
 
+    _renderSystem->startFrame();
+
     if (!_glFont)
     {
         auto fontSize = registry::getValue<int>(RKEY_RENDERPREVIEW_FONTSIZE);
@@ -468,7 +478,7 @@ bool RenderPreview::drawPreview()
 	if (!onPreRender())
 	{
 		// a return value of false means to cancel rendering
-		drawTime();
+		drawInfoText();
 		return true; // swap buffers
 	}
 
@@ -476,15 +486,15 @@ bool RenderPreview::drawPreview()
     Matrix4 projection = camera::calculateProjectionMatrix(0.1f, 10000, PREVIEW_FOV, _previewWidth, _previewHeight);
 
     // Keep the modelview matrix in the volumetest class up to date
-    _volumeTest.setModelView(getModelViewMatrix());
-    _volumeTest.setProjection(projection);
+    _view.construct(projection, getModelViewMatrix(), _previewWidth, _previewHeight);
+    _view.setViewer(_viewOrigin);
 
 	// Set the projection and modelview matrices
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixd(projection);
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(_volumeTest.GetModelview());
+	glLoadMatrixd(_view.GetModelview());
 
 	if (_renderGrid && canDrawGrid())
 	{
@@ -492,21 +502,29 @@ bool RenderPreview::drawPreview()
 	}
 
 	// Front-end render phase, collect OpenGLRenderable objects from the scene
-    render::CamRenderer renderer(_volumeTest, _shaders);
-    render::SceneRenderWalker sceneWalker(renderer, _volumeTest);
-    getScene()->foreachVisibleNodeInVolume(_volumeTest, sceneWalker);
+    render::CamRenderer renderer(_view, _shaders);
+    render::SceneRenderWalker sceneWalker(renderer, _view);
+    getScene()->foreachVisibleNodeInVolume(_view, sceneWalker);
 
     RenderStateFlags flags = getRenderFlagsFill();
 
-    // Launch the back end rendering
-    renderer.submitToShaders();
-    _renderSystem->render(flags, _volumeTest.GetModelview(), projection, _viewOrigin);
+    // Start back end render phase
+    if (getLightingModeEnabled())
+    {
+        _renderSystem->renderLitScene(flags, _view);
+    }
+    else
+    {
+        _renderSystem->renderFullBrightScene(RenderViewType::Camera, flags, _view);
+    }
 
     // Give subclasses an opportunity to render their own on-screen stuff
     onPostRender();
 
     // Draw the render time
-    drawTime();
+    drawInfoText();
+
+    _renderSystem->endFrame();
 
     return true;
 }
@@ -519,13 +537,12 @@ void RenderPreview::renderWireFrame()
     Matrix4 projection = camera::calculateProjectionMatrix(0.1f, 10000, PREVIEW_FOV, _previewWidth, _previewHeight);
 
     // Front-end render phase, collect OpenGLRenderable objects from the scene
-    render::CamRenderer renderer(_volumeTest, _shaders);
-    render::SceneRenderWalker sceneWalker(renderer, _volumeTest);
-    getScene()->foreachVisibleNodeInVolume(_volumeTest, sceneWalker);
+    render::CamRenderer renderer(_view, _shaders);
+    render::SceneRenderWalker sceneWalker(renderer, _view);
+    getScene()->foreachVisibleNodeInVolume(_view, sceneWalker);
 
     // Launch the back end rendering
-    renderer.submitToShaders();
-    _renderSystem->render(flags, _volumeTest.GetModelview(), projection, _viewOrigin);
+    _renderSystem->renderFullBrightScene(RenderViewType::Camera, flags, _view);
 }
 
 void RenderPreview::onGLMouseClick(wxMouseEvent& ev)
@@ -715,6 +732,7 @@ void RenderPreview::onStepForwardClick(wxCommandEvent& ev)
     }
 
     _renderSystem->setTime(_renderSystem->getTime() + MSEC_PER_FRAME);
+    updateFrameSelector();
     queueDraw();
 }
 
@@ -732,9 +750,38 @@ void RenderPreview::onStepBackClick(wxCommandEvent& ev)
     if (_renderSystem->getTime() > 0)
     {
         _renderSystem->setTime(_renderSystem->getTime() - MSEC_PER_FRAME);
+        updateFrameSelector();
     }
 
     queueDraw();
+}
+
+void RenderPreview::onFrameSelected(wxSpinEvent& ev)
+{
+    jumpToSelectedFrame(static_cast<wxSpinCtrl*>(ev.GetEventObject()));
+}
+
+void RenderPreview::onFrameConfirmed(wxCommandEvent& ev)
+{
+    jumpToSelectedFrame(static_cast<wxSpinCtrl*>(ev.GetEventObject()));
+}
+
+void RenderPreview::jumpToSelectedFrame(wxSpinCtrl* spinCtrl)
+{
+    if (_timer.IsRunning())
+    {
+        _timer.Stop();
+    }
+
+    _renderSystem->setTime(spinCtrl->GetValue() * MSEC_PER_FRAME);
+    queueDraw();
+}
+
+void RenderPreview::updateFrameSelector()
+{
+    auto toolbar = findNamedObject<wxToolBar>(_mainPanel, "RenderPreviewAnimToolbar");
+    auto frameSelector = static_cast<wxSpinCtrl*>(getToolBarControlByName(toolbar, "FrameSelector")->GetControl());
+    frameSelector->SetValue(_renderSystem->getTime() / MSEC_PER_FRAME);
 }
 
 void RenderPreview::onSizeAllocate(wxSizeEvent& ev)
@@ -788,7 +835,7 @@ void RenderPreview::drawGrid()
     glPopMatrix();
 }
 
-void RenderPreview::drawTime()
+void RenderPreview::drawInfoText()
 {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -820,7 +867,12 @@ void RenderPreview::drawTime()
 
     glRasterPos3f(1.0f, static_cast<float>(_previewHeight) - 1.0f, 0.0f);
 
-    _glFont->drawString(fmt::format("{0:.3f} sec.", (_renderSystem->getTime() * 0.001f)));
+    _glFont->drawString(getInfoText());
+}
+
+std::string RenderPreview::getInfoText()
+{
+    return fmt::format("{0:.3f} sec.", (_renderSystem->getTime() * 0.001f));
 }
 
 void RenderPreview::onGLKeyPress(wxKeyEvent& ev)
@@ -868,6 +920,7 @@ void RenderPreview::_onFrame(wxTimerEvent& ev)
     if (!_renderingInProgress)
     {
         _renderSystem->setTime(_renderSystem->getTime() + MSEC_PER_FRAME);
+        updateFrameSelector();
         queueDraw();
     }
 }

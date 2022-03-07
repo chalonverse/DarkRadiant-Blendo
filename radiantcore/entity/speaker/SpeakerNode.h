@@ -14,6 +14,7 @@
 #include "dragplanes.h"
 #include "../target/TargetableNode.h"
 #include "../EntityNode.h"
+#include "../RenderableEntityBox.h"
 
 namespace entity
 {
@@ -22,7 +23,7 @@ class SpeakerNode;
 typedef std::shared_ptr<SpeakerNode> SpeakerNodePtr;
 
 /// Entity node representing a speaker
-class SpeakerNode :
+class SpeakerNode final :
     public EntityNode,
     public Snappable,
     public PlaneSelectable,
@@ -30,7 +31,7 @@ class SpeakerNode :
     public ISpeakerNode
 {
     OriginKey m_originKey;
-    Vector3 m_origin;
+    Vector3 m_origin = ORIGINKEY_IDENTITY;
 
     // The current speaker radii (min / max)
     SoundRadii _radii;
@@ -40,24 +41,23 @@ class SpeakerNode :
     // The default radii as defined on the currently active sound shader
     SoundRadii _defaultRadii;
 
-    // Renderable speaker radii
-    RenderableSpeakerRadii _renderableRadii;
+    // The small entity box
+    RenderableEntityBox _renderableBox;
 
-    bool m_useSpeakerRadii;
-    bool m_minIsSet;
-    bool m_maxIsSet;
+    // Renderable speaker radii
+    RenderableSpeakerRadiiWireframe _renderableRadiiWireframe;
+    RenderableSpeakerRadiiFill _renderableRadiiFill;
+
+    bool _showRadiiWhenUnselected;
+
+    bool m_useSpeakerRadii = true;
+    bool m_minIsSet = false;
+    bool m_maxIsSet = false;
 
     AABB m_aabb_local;
 
     // the AABB that determines the rendering area
     AABB m_aabb_border;
-
-    RenderableSolidAABB m_aabb_solid;
-    RenderableWireframeAABB m_aabb_wire;
-
-    KeyObserverDelegate _radiusMinObserver;
-    KeyObserverDelegate _radiusMaxObserver;
-    KeyObserverDelegate _shaderObserver;
 
     // dragplanes for resizing using mousedrag
     selection::DragPlanes _dragPlanes;
@@ -66,7 +66,6 @@ private:
     SpeakerNode(const IEntityClassPtr& eclass);
     SpeakerNode(const SpeakerNode& other);
     void translate(const Vector3& translation);
-    void rotate(const Quaternion& rotation);
     void revertTransform() override;
     void freezeTransform() override;
     void updateTransform();
@@ -84,7 +83,7 @@ public:
 
     /// Public construction function
     static SpeakerNodePtr create(const IEntityClassPtr& eclass);
-    
+
     ~SpeakerNode();
 
     // Snappable implementation
@@ -111,10 +110,18 @@ public:
     scene::INodePtr clone() const override;
 
     // Renderable implementation
-    void renderSolid(RenderableCollector& collector, const VolumeTest& volume) const override;
-    void renderWireframe(RenderableCollector& collector, const VolumeTest& volume) const override;
+    void onPreRender(const VolumeTest& volume);
+    void renderHighlights(IRenderableCollector& collector, const VolumeTest& volume);
+    void setRenderSystem(const RenderSystemPtr& renderSystem) override;
 
     void selectedChangedComponent(const ISelectable& selectable);
+
+    void onEntitySettingsChanged() override;
+
+    void onInsertIntoScene(scene::IMapRootNode& root) override;
+    void onRemoveFromScene(scene::IMapRootNode& root) override;
+
+    const Vector3& getWorldPosition() const override;
 
 protected:
     // Gets called by the Transformable implementation whenever
@@ -128,8 +135,11 @@ protected:
     // Called after the constructor is done, overrides EntityNode
     void construct() override;
 
+    void onVisibilityChanged(bool isVisibleNow) override;
+    void onSelectionStatusChange(bool changeGroupStatus) override;
+
 private:
     void evaluateTransform();
 };
 
-} // namespace entity
+} // namespace

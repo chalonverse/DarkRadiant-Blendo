@@ -13,8 +13,8 @@ namespace ui
 {
 
 MeasurementTool::MeasurementTool() :
-	_points(GL_POINTS),
-	_lines(GL_LINE_STRIP)
+	_points(_vertices),
+	_line(_vertices)
 {}
 
 const std::string& MeasurementTool::getName()
@@ -44,30 +44,25 @@ MouseTool::Result MeasurementTool::onMouseDown(Event& ev)
 		Vector3 clickPos = xyEvent.getWorldPos();
 		xyEvent.getView().snapToGrid(clickPos);
 
-		assert(_lines.size() == _points.size());
+		Vertex3f clickVertex(clickPos);
 
-		VertexCb clickVertex(clickPos, Colour4b());
-
-		if (_points.empty())
+		if (_vertices.empty())
 		{
 			// If we just started, allocate two points
-			_points.push_back(clickVertex);
-			_points.push_back(clickVertex);
-
-			// Copy the vertices to the lines vector
-			_lines.push_back(clickVertex);
-			_lines.push_back(clickVertex);
+			_vertices.push_back(clickVertex);
+            _vertices.push_back(clickVertex);
 		}
 		else
 		{
 			// Store the click position and add a new vertex
-			_points[_points.size() - 1].vertex = clickVertex.vertex;
-			_lines[_lines.size() - 1].vertex = clickVertex.vertex;
+            _vertices[_vertices.size() - 1] = clickVertex;
 
 			// Add one additional point to the chain
-			_points.push_back(clickVertex);
-			_lines.push_back(clickVertex);
+			_vertices.push_back(clickVertex);
 		}
+
+        _points.queueUpdate();
+        _line.queueUpdate();
 
 		return Result::Activated;
     }
@@ -88,12 +83,11 @@ MouseTool::Result MeasurementTool::onMouseMove(Event& ev)
         Vector3 endPos = xyEvent.getWorldPos();
         xyEvent.getView().snapToGrid(endPos);
 
-		assert(!_points.empty());
+		assert(!_vertices.empty());
 
-		_points[_points.size() - 1].vertex = endPos;
-		_points.setColour(Colour4b(0, 0, 0, 0));
-
-		_lines[_lines.size() -1] = _points[_points.size() - 1];
+        _vertices[_vertices.size() - 1] = endPos;
+        _line.setColour({ 0, 0, 0, 0 });
+        _points.setColour({ 0, 0, 0, 0 });
     }
     catch (std::bad_cast&)
     {
@@ -121,8 +115,10 @@ MouseTool::Result MeasurementTool::onMouseUp(Event& ev)
 
 MeasurementTool::Result MeasurementTool::onCancel(IInteractiveView& view)
 {
-	_points.clear();
-	_lines.clear();
+	_vertices.clear();
+    _line.clear();
+    _points.clear();
+    _texts.clear();
 
     return Result::Finished;
 }
@@ -153,35 +149,47 @@ void MeasurementTool::ensureShaders(RenderSystem& renderSystem)
 		_colour.z() = colour.z();
 		_colour.w() = 1;
 
-		_wireShader = renderSystem.capture(fmt::format("<{0:f} {1:f} {2:f}>", _colour[0], _colour[1], _colour[2]));
+		_wireShader = renderSystem.capture(ColourShaderType::OrthoviewSolid, _colour);
 	}
 
 	if (!_pointShader)
 	{
-		_pointShader = renderSystem.capture("$POINT");
+		_pointShader = renderSystem.capture(BuiltInShaderType::Point);
 	}
+
+    if (!_textRenderer)
+    {
+        _textRenderer = renderSystem.captureTextRenderer(IGLFont::Style::Mono, 14);
+    }
 }
 
-void MeasurementTool::render(RenderSystem& renderSystem, RenderableCollector& collector, const VolumeTest& volume)
+void MeasurementTool::render(RenderSystem& renderSystem, IRenderableCollector& collector, const VolumeTest& volume)
 {
-	ensureShaders(renderSystem);
+    ensureShaders(renderSystem);
 
-	// Render lines
-	collector.addRenderable(*_wireShader, _lines, Matrix4::getIdentity());
+    _points.update(_pointShader);
+    _line.update(_wireShader);
+    
+    _texts.resize(_vertices.size() - 1);
 
-	// Render points
-	collector.addRenderable(*_pointShader, _points, Matrix4::getIdentity());
+    // Render distance string
+    for (std::size_t i = 1; i < _vertices.size(); ++i)
+    {
+        auto& text = _texts.at(i - 1);
 
-	// Render distance string
-	for (std::size_t i = 1; i < _points.size(); ++i)
-	{
-		const Vector3& a = _points[i-1].vertex;
-		const Vector3& b = _points[i].vertex;
+        if (!text)
+        {
+            text.reset(new render::StaticRenderableText("", { 0,0,0 }, _colour));
+            text->update(_textRenderer);
+        }
 
-		glColor4fv(_colour);
-		glRasterPos3dv((a+b)*0.5);
-		GlobalOpenGL().drawString(string::to_string((a-b).getLength()));
-	}
+        const auto& a = _vertices[i - 1];
+        const auto& b = _vertices[i];
+
+        text->setColour(_colour);
+        text->setText(string::to_string((a - b).getLength()));
+        text->setWorldPosition((a + b) * 0.5);
+    }
 }
 
 } // namespace

@@ -1,5 +1,6 @@
 #include "Repository.h"
 
+#include "i18n.h"
 #include <git2.h>
 #include "itextstream.h"
 #include "imap.h"
@@ -10,6 +11,7 @@
 #include "GitException.h"
 #include "os/path.h"
 #include "os/file.h"
+#include "fmt/format.h"
 
 namespace vcs
 {
@@ -113,7 +115,7 @@ Remote::Ptr Repository::getTrackedRemote()
 
     if (!head)
     {
-        throw GitException("Could not retrieve HEAD reference from repository");
+        throw GitException(_("Could not retrieve HEAD reference from repository"));
     }
 
     auto trackedBranch = head->getUpstream();
@@ -122,7 +124,7 @@ Remote::Ptr Repository::getTrackedRemote()
 
     if (!trackedBranch)
     {
-        throw GitException("No tracked remote branch configured");
+        throw GitException(_("No tracked remote branch configured"));
     }
 
     auto remoteName = getUpstreamRemoteName(*head);
@@ -132,7 +134,7 @@ Remote::Ptr Repository::getTrackedRemote()
 
     if (!remote)
     {
-        throw GitException("Failed to get the named remote: " + remoteName);
+        throw GitException(fmt::format(_("Failed to get the named remote: {0}"), remoteName));
     }
 
     return remote;
@@ -153,10 +155,10 @@ void Repository::pushToTrackedRemote()
 void Repository::fastForwardToTrackedRemote()
 {
     auto head = getHead();
-    if (!head) throw GitException("Could not retrieve HEAD reference from repository");
+    if (!head) throw GitException(_("Could not retrieve HEAD reference from repository"));
 
     auto upstream = head->getUpstream();
-    if (!upstream) throw GitException("No tracked remote branch configured");
+    if (!upstream) throw GitException(_("No tracked remote branch configured"));
 
     // Lookup the target object
     git_oid targetOid;
@@ -195,7 +197,7 @@ RefSyncStatus Repository::getSyncStatusOfBranch(const Reference& reference)
 
     auto trackedBranch = reference.getUpstream();
 
-    if (!trackedBranch) throw GitException("No tracked branch, cannot check sync status");
+    if (!trackedBranch) throw GitException(_("The current branch doesn't track a remote, cannot check sync status"));
 
     git_revwalk* walker;
     git_revwalk_new(&walker, _repository);
@@ -211,10 +213,10 @@ RefSyncStatus Repository::getSyncStatusOfBranch(const Reference& reference)
     git_oid id;
     while (!git_revwalk_next(&id, walker))
     {
-        rMessage() << Reference::OidToString(&id) << " => ";
+        //rMessage() << Reference::OidToString(&id) << " => ";
         ++status.remoteCommitsAhead;
     }
-    rMessage() << std::endl;
+    //rMessage() << std::endl;
 
     git_revwalk_free(walker);
 
@@ -226,10 +228,10 @@ RefSyncStatus Repository::getSyncStatusOfBranch(const Reference& reference)
 
     while (!git_revwalk_next(&id, walker))
     {
-        rMessage() << Reference::OidToString(&id) << " => ";
+        //rMessage() << Reference::OidToString(&id) << " => ";
         ++status.localCommitsAhead;
     }
-    rMessage() << std::endl;
+    //rMessage() << std::endl;
 
     git_revwalk_free(walker);
 
@@ -326,15 +328,19 @@ void Repository::createCommit(const CommitMetadata& metadata, const Reference::P
 
     auto tree = index->writeTree(*this);
 
-    git_oid headOid;
-    error = git_reference_name_to_id(&headOid, _repository, head->getName().c_str());
-    GitException::ThrowOnError(error);
-
-    auto parentCommit = Commit::LookupFromOid(_repository, &headOid);
-
     std::vector<const git_commit*> parentCommits;
-    parentCommits.push_back(parentCommit->_get());
 
+    // It's possible that there is no HEAD yet (first commit in the repo)
+    if (head)
+    {
+        git_oid headOid;
+        error = git_reference_name_to_id(&headOid, _repository, head->getName().c_str());
+        GitException::ThrowOnError(error);
+        
+        auto parentCommit = Commit::LookupFromOid(_repository, &headOid);
+        parentCommits.push_back(parentCommit->_get());
+    }
+    
     // Check if we have an additional parent
     if (additionalParent)
     {
@@ -349,7 +355,7 @@ void Repository::createCommit(const CommitMetadata& metadata, const Reference::P
 
     git_oid commitOid;
     error = git_commit_create(&commitOid,
-        _repository, head->getName().c_str(),
+        _repository, head ? head->getName().c_str() : "HEAD",
         signature, signature,
         nullptr, metadata.message.c_str(),
         tree->_get(),

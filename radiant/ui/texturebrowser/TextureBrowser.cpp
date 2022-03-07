@@ -535,8 +535,8 @@ public:
     int rowAdvance;
 };
 
-TextureBrowser::Vector2i TextureBrowser::getPositionForTexture(
-    CurrentPosition& currentPos, const Texture& tex) const
+Vector2i TextureBrowser::getPositionForTexture(CurrentPosition& currentPos,
+                                               const Texture& tex) const
 {
     int nWidth = getTextureWidth(tex);
     int nHeight = getTextureHeight(tex);
@@ -622,7 +622,7 @@ bool TextureBrowser::materialIsVisible(const MaterialPtr& material)
                 return false;
             }
         }
-		
+
 		return true;
     }
 
@@ -718,6 +718,7 @@ void TextureBrowser::performUpdate()
     });
 
     updateScroll();
+    clampOriginY(); // scroll value might be out of range after the update
 }
 
 void TextureBrowser::onActiveShadersChanged()

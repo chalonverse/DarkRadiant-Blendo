@@ -18,9 +18,7 @@ class Graph;
 typedef std::weak_ptr<Graph> GraphWeakPtr;
 
 /// Main implementation of INode
-class Node :
-	public virtual INode,
-	public std::enable_shared_from_this<Node>
+class Node : public virtual INode, public std::enable_shared_from_this<Node>
 {
 public:
 	enum {
@@ -140,17 +138,19 @@ public:
 	 */
 	virtual void setFiltered(bool filtered) override
     {
-		if (filtered) {
-			_state |= eFiltered;
+		if (filtered)
+        {
+			enable(eFiltered);
 		}
-		else {
-			_state &= ~eFiltered;
+		else
+        {
+			disable(eFiltered);
 		}
 	}
 
 	const Matrix4& localToWorld() const override;
 
-	void transformChangedLocal() override;
+	virtual void transformChangedLocal() override;
 
 	void transformChanged() override;
 
@@ -192,14 +192,18 @@ public:
 
 	// Base renderable implementation
 	virtual RenderSystemPtr getRenderSystem() const;
-	virtual void setRenderSystem(const RenderSystemPtr& renderSystem) override;
+	void setRenderSystem(const RenderSystemPtr& renderSystem) override;
 
 protected:
     // Set the "forced visible" flag, only to be used internally by subclasses
-	void setForcedVisibility(bool forceVisible, bool includeChildren) override;
+	virtual void setForcedVisibility(bool forceVisible, bool includeChildren) override;
 
 	// Method for subclasses to check whether this node is forcedly visible
 	bool isForcedVisible() const;
+
+    // Overridable method to get notified on visibility changes of this node
+    virtual void onVisibilityChanged(bool isVisibleNow)
+    {}
 
 	// Fills in the ancestors and self (in this order) into the given targetPath.
 	void getPathRecursively(scene::Path& targetPath);

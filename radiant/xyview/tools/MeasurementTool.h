@@ -3,8 +3,10 @@
 #include "imousetool.h"
 #include "iorthoview.h"
 #include "math/Vector3.h"
+#include "math/Vector4.h"
 #include "render.h"
-#include "render/Colour4.h"
+#include "render/RenderableVertexArray.h"
+#include "render/StaticRenderableText.h"
 
 namespace ui
 {
@@ -17,13 +19,16 @@ class MeasurementTool :
 	public MouseTool
 {
 private:
-	RenderablePointVector _points;
-	RenderablePointVector _lines;
+    std::vector<Vertex3f> _vertices;
+    render::RenderablePoints _points;
+	render::RenderableLine _line;
+    ITextRenderer::Ptr _textRenderer;
+    std::vector<std::shared_ptr<render::StaticRenderableText>> _texts;
 
 	ShaderPtr _pointShader;
 	ShaderPtr _wireShader;
 
-	Colour4 _colour;
+	Vector4 _colour;
 
 public:
 	MeasurementTool();
@@ -40,7 +45,7 @@ public:
 	Result onCancel(IInteractiveView& view) override;
 	void onMouseCaptureLost(IInteractiveView& view) override;
 
-	void render(RenderSystem& renderSystem, RenderableCollector& collector, const VolumeTest& volume) override;
+	void render(RenderSystem& renderSystem, IRenderableCollector& collector, const VolumeTest& volume) override;
 
 private:
 	void ensureShaders(RenderSystem& renderSystem);

@@ -15,7 +15,7 @@
 #include "SpawnArgs.h"
 
 #include "light/LightNode.h"
-#include "doom3group/Doom3GroupNode.h"
+#include "doom3group/StaticGeometryNode.h"
 #include "speaker/SpeakerNode.h"
 #include "generic/GenericEntityNode.h"
 #include "eclassmodel/EclassModelNode.h"
@@ -76,7 +76,7 @@ IEntityNodePtr createNodeForEntity(const IEntityClassPtr& eclass)
 	else if (!eclass->isFixedSize())
 	{
 		// Variable size entity
-		node = Doom3GroupNode::Create(eclass);
+		node = StaticGeometryNode::Create(eclass);
 	}
 	else if (!eclass->getAttribute("model").getValue().empty())
 	{
@@ -162,7 +162,7 @@ IEntityNodePtr Doom3EntityModule::createEntityFromSelection(const std::string& n
     {
         selection::algorithm::deleteSelection();
 
-        ITransformablePtr transform = Node_getTransformable(node);
+        ITransformablePtr transform = scene::node_cast<ITransformable>(node);
 
         if (transform != 0) {
             transform->setType(TRANSFORM_PRIMITIVE);
@@ -295,17 +295,40 @@ void Doom3EntityModule::initialiseModule(const IApplicationContext& ctx)
 
     GlobalCommandSystem().addCommand("CreateSpeaker", std::bind(&algorithm::CreateSpeaker, std::placeholders::_1),
         { cmd::ARGTYPE_STRING, cmd::ARGTYPE_VECTOR3 });
+
+    _settingsListener = EntitySettings::InstancePtr()->signal_settingsChanged().connect(
+        sigc::mem_fun(this, &Doom3EntityModule::onEntitySettingsChanged));
 }
 
 void Doom3EntityModule::shutdownModule()
 {
 	rMessage() << getName() << "::shutdownModule called." << std::endl;
 
+    _settingsListener.disconnect();
+
 	// Destroy the settings instance
 	EntitySettings::destroy();
 }
 
+void Doom3EntityModule::onEntitySettingsChanged()
+{
+    if (!GlobalMapModule().getRoot()) return;
+
+    // Actively notify all EntityNodes about the settings change
+    GlobalMapModule().getRoot()->foreachNode([](const scene::INodePtr& node)
+    {
+        auto entity = std::dynamic_pointer_cast<EntityNode>(node);
+
+        if (entity)
+        {
+            entity->onEntitySettingsChanged();
+        }
+
+        return true;
+    });
+}
+
 // Static module instance
-module::StaticModule<Doom3EntityModule> entityModule;
+module::StaticModuleRegistration<Doom3EntityModule> entityModule;
 
 } // namespace entity

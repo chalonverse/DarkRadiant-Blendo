@@ -10,7 +10,7 @@ namespace render
 
 RenderSystemPtr RenderSystemFactory::createRenderSystem()
 {
-    return OpenGLRenderSystemPtr(new OpenGLRenderSystem());
+    return std::make_shared<OpenGLRenderSystem>();
 }
 
 const std::string& RenderSystemFactory::getName() const
@@ -31,6 +31,6 @@ void RenderSystemFactory::initialiseModule(const IApplicationContext& ctx)
 }
 
 // Define the static RenderSystemFactory module
-module::StaticModule<RenderSystemFactory> renderSystemFactory;
+module::StaticModuleRegistration<RenderSystemFactory> renderSystemFactory;
 
 } // namespace

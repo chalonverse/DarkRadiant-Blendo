@@ -12,7 +12,7 @@
 #include "irender.h"
 
 #include "../FreezePointer.h"
-#include "render/NopVolumeTest.h"
+#include "render/NopRenderView.h"
 #include "render/CamRenderer.h"
 
 class wxToolBarToolBase;
@@ -53,13 +53,17 @@ private:
 	void onPausePlaybackClick(wxCommandEvent& ev);
     void onStepForwardClick(wxCommandEvent& ev);
     void onStepBackClick(wxCommandEvent& ev);
+    void onFrameSelected(wxSpinEvent& ev);
+    void onFrameConfirmed(wxCommandEvent& ev);
+    void jumpToSelectedFrame(wxSpinCtrl* spinCtrl);
+    void updateFrameSelector();
 
     void onSizeAllocate(wxSizeEvent& ev);
     void onFilterConfigChanged();
     void onRenderModeChanged(wxCommandEvent& ev);
 	void onGridButtonClick(wxCommandEvent& ev);
 
-    void drawTime();
+    void drawInfoText();
 	void drawGrid();
 
     // Called each frame by wxTimer
@@ -94,8 +98,8 @@ protected:
     // The backend rendersystem instance
     RenderSystemPtr _renderSystem;
 
-    // Dummy VolumeTest
-    render::NopVolumeTest _volumeTest;
+    // Uses a dummy VolumeTest implementation
+    render::NopRenderView _view;
 
     // Current viewer position and view angles
     Vector3 _viewOrigin;
@@ -173,6 +177,10 @@ protected:
 
     // Can be overridden by subclasses to update their scene/models
     virtual void onRenderModeChanged() {}
+
+    // Returns the info text that is rendered in the lower left corner of the preview. 
+    // Shows the render time by default, but can be overridden by subclasses.
+    virtual std::string getInfoText();
 
     /**
      * \brief

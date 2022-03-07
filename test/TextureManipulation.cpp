@@ -1,5 +1,6 @@
 #include "RadiantTest.h"
 
+#include <optional>
 #include "itransformable.h"
 #include "ishaders.h"
 #include "ishaderclipboard.h"
@@ -124,7 +125,7 @@ void performPatchRotateTest(bool clockwise)
     algorithm::foreachPatchVertex(*patch, [&](const PatchControl& ctrl)
     {
         auto transformed = transform * (*old++);
-        EXPECT_TRUE(math::isNear(transformed, ctrl.texcoord, 0.02)) 
+        EXPECT_TRUE(math::isNear(transformed, ctrl.texcoord, 0.02))
             << "Transformed UV coords should be " << transformed << " but was " << ctrl.texcoord;
     });
 }
@@ -373,7 +374,7 @@ TEST_F(TextureManipulationTest, PasteTextureToOrthogonalFace1)
 
     for (const auto& pair : sharedVertices)
     {
-        EXPECT_FALSE(math::isNear(pair.first->texcoord, pair.second->texcoord, 0.01)) 
+        EXPECT_FALSE(math::isNear(pair.first->texcoord, pair.second->texcoord, 0.01))
             << "Texture coordinates are the same before pasting the texture projection";
     }
 
@@ -384,7 +385,7 @@ TEST_F(TextureManipulationTest, PasteTextureToOrthogonalFace1)
     SelectionVolume testFaceUp(viewFaceUp);
     GlobalShaderClipboard().pickFromSelectionTest(testFaceUp);
 
-    EXPECT_EQ(GlobalShaderClipboard().getSourceType(), selection::IShaderClipboard::SourceType::Face) 
+    EXPECT_EQ(GlobalShaderClipboard().getSourceType(), selection::IShaderClipboard::SourceType::Face)
         << "Selection test failed to select the face";
 
     render::View viewFaceRight(true);
@@ -561,7 +562,7 @@ void performTextureLockBrushTransformationTest(const std::function<void(ITransfo
         oldTexCoords.push_back(vertex.texcoord);
     }
 
-    auto transformable = Node_getTransformable(brushNode);
+    auto transformable = scene::node_cast<ITransformable>(brushNode);
 
     if (transformable)
     {
@@ -619,7 +620,7 @@ inline scene::INodePtr create512CubeTextured1x1(const std::string& material)
 TEST_F(TextureManipulationTest, FaceGetTexelScale)
 {
     auto brushNode = create512CubeTextured1x1("textures/a_1024x512");
-    
+
     // Get the texture dimensions
     auto editorImage = GlobalMaterialManager().getMaterial("textures/a_1024x512")->getEditorImage();
     auto textureWidth = editorImage->getWidth();
@@ -647,7 +648,7 @@ TEST_F(TextureManipulationTest, FaceGetTexelScale)
 TEST_F(TextureManipulationTest, FaceGetTextureAspectRatio)
 {
     auto brushNode = create512CubeTextured1x1("textures/a_1024x512");
-    
+
     // Get the texture dimensions
     auto editorImage = GlobalMaterialManager().getMaterial("textures/a_1024x512")->getEditorImage();
     auto textureWidth = editorImage->getWidth();
@@ -655,8 +656,8 @@ TEST_F(TextureManipulationTest, FaceGetTextureAspectRatio)
 
     // Get a face and check the texture bounds
     auto& face = Node_getIBrush(brushNode)->getFace(0);
-    
-    EXPECT_NEAR(face.getTextureAspectRatio(), static_cast<float>(textureWidth) / textureHeight, 0.01) 
+
+    EXPECT_NEAR(face.getTextureAspectRatio(), static_cast<float>(textureWidth) / textureHeight, 0.01)
         << "Wrong texture aspect ratio reported";
 
     brushNode = create512CubeTextured1x1("textures/numbers/0");
@@ -681,7 +682,7 @@ TEST_F(TextureManipulationTest, PatchGetTextureAspectRatio)
 
     patchNode = algorithm::createPatchFromBounds(worldspawn, AABB(Vector3(4, 50, 60), Vector3(64, 128, 256)), "textures/numbers/0");
     patch = Node_getIPatch(patchNode);
-    
+
     EXPECT_NEAR(patch->getTextureAspectRatio(), 1.0, 0.001) << "Number texture aspect ratio should be 1.0";
 }
 
@@ -768,7 +769,7 @@ TEST_F(TextureManipulationTest, FaceGetShiftScaleRotation)
     // These materials have an editor image with 2:1 aspect ratio
     auto materialA = "textures/a_1024x512";
     auto materialB = "textures/b_1024x512";
-    
+
     std::string mapPath = "maps/simple_brushes.map";
     GlobalCommandSystem().executeCommand("OpenMap", mapPath);
 
@@ -797,6 +798,59 @@ TEST_F(TextureManipulationTest, FaceGetShiftScaleRotation)
     EXPECT_NEAR(ssr.scale[0], 0.25, 0.01) << "Brush B: Horizontal Scale is off";
     EXPECT_NEAR(ssr.scale[1], 0.25, 0.01) << "Brush B: Vertical Scale is off";
     EXPECT_NEAR(ssr.rotate, 75, 0.01) << "Brush B: Rotation Value is off";
+}
+
+// #5846: Rotating a func_static brush 90 degress messes up the face textures
+TEST_F(TextureManipulationTest, RotateFuncStaticBrush90)
+{
+    std::string mapPath = "maps/rotate_with_texlock.map";
+    GlobalCommandSystem().executeCommand("OpenMap", mapPath);
+
+    auto funcStatic = algorithm::getEntityByName(GlobalMapModule().getRoot(), "func_static_1");
+
+    auto brushNode = algorithm::getNthChild(funcStatic, 0);
+    auto brush = Node_getIBrush(brushNode);
+
+    auto& faceBefore = *algorithm::findBrushFaceWithNormal(brush, { 1, 0, 0 });
+    
+    // Record the texture coordinates of this face
+    std::vector<WindingVertex> oldVertices;
+    for (const auto& vertex : faceBefore.getWinding())
+    {
+        oldVertices.push_back(vertex);
+    }
+
+    // Select and rotate that func_static
+    Node_setSelected(funcStatic, true);
+    GlobalCommandSystem().executeCommand("RotateSelectionZ");
+
+    // Trigger bounds evalation which will make the brush evaluate the plane intersections
+    // Same happens when rendering the scene after the brush evaluation
+    funcStatic->worldAABB();
+
+    auto& faceAfter = *algorithm::findBrushFaceWithNormal(brush, { 1, 0, 0 });
+
+    std::optional<Vector2> distance;
+    auto old = oldVertices.begin();
+    for (const auto& vertex : faceAfter.getWinding())
+    {
+        // Assume the 3D coordinates have changed
+        EXPECT_FALSE(math::isNear(vertex.vertex, old->vertex, 0.01));
+
+        // The texture coordinates should remain equivalent (due to texture lock)
+        // The absolute coordinates in UV space might be off by some integer number
+        // We expect the distance to the previous coordinates to be the same
+        if (distance.has_value())
+        {
+            EXPECT_TRUE(math::isNear(distance.value(), vertex.texcoord - old->texcoord, 0.01));
+        }
+        else
+        {
+            distance = vertex.texcoord - old->texcoord;
+        }
+
+        ++old;
+    }
 }
 
 }

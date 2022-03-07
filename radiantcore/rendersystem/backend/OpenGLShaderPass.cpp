@@ -216,34 +216,6 @@ void OpenGLShaderPass::applyAllTextures(OpenGLState& current,
     }
 }
 
-// Set up cube map
-void OpenGLShaderPass::setUpCubeMapAndTexGen(OpenGLState& current,
-                                             unsigned requiredState,
-                                             const Vector3& viewer)
-{
-    if (requiredState & RENDER_TEXTURE_CUBEMAP)
-    {
-        // Copy cubemap mode enum to current state object
-        current.cubeMapMode = _glState.cubeMapMode;
-
-        // Apply axis transformation (swap Y and Z coordinates)
-        Matrix4 transform = Matrix4::byRows(
-            1, 0, 0, 0,
-            0, 0, 1, 0,
-            0, 1, 0, 0,
-            0, 0, 0, 1
-        );
-
-        // Subtract the viewer position
-        transform.translateBy(-viewer);
-
-        // Apply to the texture matrix
-        glMatrixMode(GL_TEXTURE);
-        glLoadMatrixd(transform);
-        glMatrixMode(GL_MODELVIEW);
-    }
-}
-
 // Apply own state to current state object
 void OpenGLShaderPass::applyState(OpenGLState& current,
                                   unsigned int globalStateMask,
@@ -472,9 +444,6 @@ void OpenGLShaderPass::applyState(OpenGLState& current,
     current.setColour(_glState.getColour());
     debug::assertNoGlErrors();
 
-    // Set up the cubemap and texgen parameters
-    setUpCubeMapAndTexGen(current, requiredState, viewer);
-
   if(requiredState & RENDER_BLEND
     && (_glState.m_blend_src != current.m_blend_src || _glState.m_blend_dst != current.m_blend_dst))
   {
@@ -535,38 +504,20 @@ void OpenGLShaderPass::deactivateShaderProgram(OpenGLState& current)
 
 // Add a Renderable to this bucket
 void OpenGLShaderPass::addRenderable(const OpenGLRenderable& renderable,
-                                     const Matrix4& modelview,
-                                     const RendererLight* light,
-                                     const IRenderEntity* entity)
+                                     const Matrix4& modelview)
 {
-    if (entity)
-    {
-        // Find or insert the render entity in our map
-        auto i = _renderables.find(entity);
-        if (i == _renderables.end())
-        {
-            i = _renderables.insert(std::make_pair(entity, Renderables())).first;
-        }
-
-        // Add this renderable to the list of renderables associated with the entity
-        i->second.push_back(
-            TransformedRenderable(renderable, modelview, light, entity)
-        );
-    }
-    else
-    {
-        _renderablesWithoutEntity.push_back(
-            TransformedRenderable(renderable, modelview, light, nullptr)
-        );
-    }
+    _renderablesWithoutEntity.emplace_back(renderable, modelview);
 }
 
 // Render the bucket contents
 void OpenGLShaderPass::render(OpenGLState& current,
                               unsigned int flagsMask,
                               const Vector3& viewer,
+                              const VolumeTest& view,
                               std::size_t time)
 {
+    if (!_owner.isVisible()) return;
+
     // Reset the texture matrix
     glMatrixMode(GL_TEXTURE);
     glLoadMatrixd(Matrix4::getIdentity());
@@ -576,28 +527,28 @@ void OpenGLShaderPass::render(OpenGLState& current,
     // Apply our state to the current state object
     applyState(current, flagsMask, viewer, time, NULL);
 
+    RenderInfo info(current.getRenderFlags(), viewer, current.cubeMapMode);
+    _owner.drawSurfaces(view, info);
+
     if (!_renderablesWithoutEntity.empty())
     {
         renderAllContained(_renderablesWithoutEntity, current, viewer, time);
     }
+}
 
-    for (RenderablesByEntity::const_iterator i = _renderables.begin();
-         i != _renderables.end();
-         ++i)
-    {
-        // Apply our state to the current state object
-        applyState(current, flagsMask, viewer, time, i->first);
-
-        if (!stateIsActive())
-        {
-            continue;
-        }
-
-        renderAllContained(i->second, current, viewer, time);
-    }
-
+void OpenGLShaderPass::clearRenderables()
+{
     _renderablesWithoutEntity.clear();
-    _renderables.clear();
+}
+
+bool OpenGLShaderPass::empty()
+{
+    return _renderablesWithoutEntity.empty() && !_owner.hasSurfaces() && !_owner.hasWindings();
+}
+
+bool OpenGLShaderPass::isApplicableTo(RenderViewType renderViewType) const
+{
+    return _owner.isApplicableTo(renderViewType);
 }
 
 bool OpenGLShaderPass::stateIsActive()
@@ -611,9 +562,11 @@ bool OpenGLShaderPass::stateIsActive()
 // Setup lighting
 void OpenGLShaderPass::setUpLightingCalculation(OpenGLState& current,
                                                 const RendererLight* light,
+                                                const Matrix4& worldToLight,
                                                 const Vector3& viewer,
                                                 const Matrix4& objTransform,
-                                                std::size_t time)
+                                                std::size_t time,
+                                                bool invertVertexColour)
 {
     // Get the light shader and examine its first (and only valid) layer
     assert(light);
@@ -650,18 +603,23 @@ void OpenGLShaderPass::setUpLightingCalculation(OpenGLState& current,
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
-    // Get the world-space to light-space transformation matrix
-    Matrix4 world2light = light->getLightTextureTransformation();
-
     // Set the GL program parameters
     GLProgram::Params parms(
-        light->getLightOrigin(), layer->getColour(), world2light
+        light->getLightOrigin(), layer->getColour(), worldToLight
     );
     parms.isAmbientLight = lightMat->isAmbientLight();
-    parms.invertVertexColour = _glState.isColourInverted();
+    parms.invertVertexColour = invertVertexColour;
 
     assert(current.glProgram);
     current.glProgram->applyRenderParams(osViewer, objTransform, parms);
+}
+
+void OpenGLShaderPass::SetUpNonInteractionProgram(OpenGLState& current, const Vector3& viewer, const Matrix4& objTransform)
+{
+    static GLProgram::Params parms({ 0,0,0 }, { 0,0,0,0 }, Matrix4::getIdentity());
+
+    assert(current.glProgram);
+    current.glProgram->applyRenderParams(viewer, objTransform, parms);
 }
 
 // Flush renderables
@@ -676,7 +634,7 @@ void OpenGLShaderPass::renderAllContained(const Renderables& renderables,
     glPushMatrix();
 
     // Iterate over each transformed renderable in the vector
-    for (const TransformedRenderable& r : renderables)
+    for (const auto& r : renderables)
     {
         // If the current iteration's transform matrix was different from the
         // last, apply it and store for the next iteration
@@ -697,14 +655,6 @@ void OpenGLShaderPass::renderAllContained(const Renderables& renderables,
             {
                 glFrontFace(GL_CCW);
             }
-        }
-
-        // If we are using a lighting program and this renderable is lit, set
-        // up the lighting calculation
-        const RendererLight* light = r.light;
-        if (current.glProgram && light)
-        {
-            setUpLightingCalculation(current, light, viewer, *transform, time);
         }
 
         // Render the renderable

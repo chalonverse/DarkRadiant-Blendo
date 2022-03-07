@@ -103,9 +103,9 @@ inline bool surfaceHasVertex(const model::IModelSurface& surface, const std::fun
 }
 
 const std::string CustomMaterialName = "custom_surface_name";
-const Vector3 VertexColour1(0.1, 0.2, 0.3);
-const Vector3 VertexColour2(0.4, 0.5, 0.6);
-const Vector3 VertexColour3(0.7, 0.8, 0.9);
+const Vector4 VertexColour1(0.1, 0.2, 0.3, 0.11);
+const Vector4 VertexColour2(0.4, 0.5, 0.6, 0.12);
+const Vector4 VertexColour3(0.7, 0.8, 0.9, 0.13);
 
 inline model::ModelNodePtr getChildModelNode(const scene::INodePtr& entity)
 {
@@ -254,6 +254,19 @@ public:
     {
         return indices;
     }
+
+    const AABB& getSurfaceBounds() const override
+    {
+        static AABB aabb;
+        aabb = AABB();
+
+        for (const auto& vertex : vertices)
+        {
+            aabb.includePoint(vertex);
+        }
+
+        return aabb;
+    }
 };
 
 TEST_F(ModelExportTest, LwoVertexColoursAddedBySurface)
@@ -384,14 +397,15 @@ TEST_F(ModelExportTest, ExportedModelTriggersEntityRefresh)
 }
 
 // #5705: "Replace Selection with exported Model" should preserve spawnargs
+// #5858: "Replace Selection with exported Model" sets classname to "func_static".
 TEST_F(ModelExportTest, ExportedModelInheritsSpawnargs)
 {
     auto modelPath = "models/torch.lwo";
     auto exportedModelPath = "models/export_test.lwo";
     auto fullModelPath = _context.getTestProjectPath() + exportedModelPath;
 
-    // Create an entity referencing this new model
-    auto eclass = GlobalEntityClassManager().findClass("func_static");
+    // Create an entity referencing this new model, let's use a mover door
+    auto eclass = GlobalEntityClassManager().findClass("atdm:mover_door");
     auto entity = GlobalEntityModule().createEntity(eclass);
 
     scene::addNodeToContainer(entity, GlobalMapModule().getRoot());
@@ -450,6 +464,8 @@ TEST_F(ModelExportTest, ExportedModelInheritsSpawnargs)
     EXPECT_EQ(newEntity->getKeyValue("model"), exportedModelPath);
     EXPECT_EQ(newEntity->getKeyValue("dummy1"), "value1");
     EXPECT_EQ(newEntity->getKeyValue("dummy2"), "value2");
+    EXPECT_EQ(newEntity->getKeyValue("classname"), "atdm:mover_door");
+    EXPECT_EQ(newEntity->getEntityClass()->getName(), "atdm:mover_door");
 
     // This one should not have been inherited, it was belonging to the other entity
     EXPECT_EQ(newEntity->getKeyValue("henrys_key"), "");

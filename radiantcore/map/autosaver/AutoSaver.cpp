@@ -30,10 +30,10 @@
 
 #include <fmt/format.h>
 
-namespace map 
+namespace map
 {
 
-namespace 
+namespace
 {
 	// Registry key names
 	const char* GKEY_MAP_EXTENSION = "/mapFormat/fileExtension";
@@ -43,7 +43,7 @@ namespace
 		std::string mapExt = game::current::getValue<std::string>(GKEY_MAP_EXTENSION);
 
 		// Construct the base name without numbered extension
-		std::string filename = (snapshotPath / mapName).string();
+		std::string filename = (snapshotPath / mapName).replace_extension().string();
 
 		// Now append the number and the map extension to the map name
 		filename += ".";
@@ -70,7 +70,7 @@ void AutoMapSaver::clearChanges()
     _savedChangeCount = 0;
 }
 
-void AutoMapSaver::saveSnapshot() 
+void AutoMapSaver::saveSnapshot()
 {
 	// Original GtkRadiant comments:
 	// we need to do the following
@@ -81,20 +81,27 @@ void AutoMapSaver::saveSnapshot()
 	// Construct the fs::path class out of the full map path (throws on fail)
 	fs::path fullPath = GlobalMapModule().getMapName();
 
-	// Append the the snapshot folder to the path
+    if (!fullPath.is_absolute())
+    {
+        fullPath = GlobalFileSystem().findFile(fullPath.string()) + fullPath.string();
+    }
+
+	// Assemble the absolute path to the snapshot folder
 	fs::path snapshotPath = fullPath;
 	snapshotPath.remove_filename();
+
+    // If the snapshots folder in the registry is absolute, operator/= will use the absolute one
 	snapshotPath /= GlobalRegistry().get(RKEY_AUTOSAVE_SNAPSHOTS_FOLDER);
 
 	// Retrieve the mapname
-	std::string mapName = fullPath.filename().string();
-
-	// Map existing snapshots (snapshot num => path)
-	std::map<int, std::string> existingSnapshots;
+	auto mapName = fullPath.filename().string();
 
 	// Check if the folder exists and create it if necessary
 	if (os::fileOrDirExists(snapshotPath.string()) || os::makeDirectory(snapshotPath.string()))
 	{
+        // Map existing snapshots (snapshot num => path)
+        std::map<int, std::string> existingSnapshots;
+
 		collectExistingSnapshots(existingSnapshots, snapshotPath, mapName);
 
 		int highestNum = existingSnapshots.empty() ? 0 : existingSnapshots.rbegin()->first + 1;
@@ -108,14 +115,13 @@ void AutoMapSaver::saveSnapshot()
 
 		handleSnapshotSizeLimit(existingSnapshots, snapshotPath, mapName);
 	}
-	else 
+	else
 	{
-		rError() << "Snapshot save failed.. unable to create directory";
-		rError() << snapshotPath << std::endl;
+		rError() << "Snapshot save failed, unable to create directory " << snapshotPath << std::endl;
 	}
 }
 
-void AutoMapSaver::handleSnapshotSizeLimit(const std::map<int, std::string>& existingSnapshots, 
+void AutoMapSaver::handleSnapshotSizeLimit(const std::map<int, std::string>& existingSnapshots,
 	const fs::path& snapshotPath, const std::string& mapName)
 {
 	std::size_t maxSnapshotFolderSize =
@@ -160,7 +166,7 @@ void AutoMapSaver::handleSnapshotSizeLimit(const std::map<int, std::string>& exi
 			return;
 		}
 
-		rMessage() << "AutoSaver: The snapshot files in " << snapshotPath << 
+		rMessage() << "AutoSaver: The snapshot files in " << snapshotPath <<
 			" take up more than " << maxSnapshotFolderSize << " MB. You might consider cleaning it up." << std::endl;
 
 		// Notify the user
@@ -175,7 +181,7 @@ void AutoMapSaver::handleSnapshotSizeLimit(const std::map<int, std::string>& exi
 	}
 }
 
-void AutoMapSaver::collectExistingSnapshots(std::map<int, std::string>& existingSnapshots, 
+void AutoMapSaver::collectExistingSnapshots(std::map<int, std::string>& existingSnapshots,
 	const fs::path& snapshotPath, const std::string& mapName)
 {
 	for (int num = 0; num < INT_MAX; num++)
@@ -273,8 +279,8 @@ void AutoMapSaver::constructPreferences()
 	IPreferencePage& page = GlobalPreferenceSystem().getPage(_("Settings/Autosave"));
 
 	page.appendCheckBox(_("Save Snapshots"), RKEY_AUTOSAVE_SNAPSHOTS_ENABLED);
-	page.appendEntry(_("Snapshot folder (relative to map folder)"), RKEY_AUTOSAVE_SNAPSHOTS_FOLDER);
-	page.appendEntry(_("Max total Snapshot size per map (MB)"), RKEY_AUTOSAVE_MAX_SNAPSHOT_FOLDER_SIZE);
+	page.appendEntry(_("Snapshot Folder (absolute, or relative to Map Folder)"), RKEY_AUTOSAVE_SNAPSHOTS_FOLDER);
+	page.appendEntry(_("Max total Snapshot size per Map (MB)"), RKEY_AUTOSAVE_MAX_SNAPSHOT_FOLDER_SIZE);
 }
 
 void AutoMapSaver::onMapEvent(IMap::MapEvent ev)
@@ -348,6 +354,6 @@ void AutoMapSaver::shutdownModule()
 	_signalConnections.clear();
 }
 
-module::StaticModule<AutoMapSaver> staticAutoSaverModule;
+module::StaticModuleRegistration<AutoMapSaver> staticAutoSaverModule;
 
 } // namespace map

@@ -58,6 +58,8 @@ Paths pointfiles()
 
 }
 
+// Test ensures that point file name case is not relevant 
+// ALTAr.lin should be found when looking for files matching altar.map
 TEST_F(PointTraceTest, IdentifyMapPointfiles)
 {
     GlobalCommandSystem().executeCommand("OpenMap", std::string("altar.map"));
@@ -65,7 +67,7 @@ TEST_F(PointTraceTest, IdentifyMapPointfiles)
     // Check the pointfiles for this map
     auto pfs = pointfiles();
     ASSERT_EQ(pfs.size(), 2);
-    EXPECT_EQ(pfs[0].filename(), "altar.lin");
+    EXPECT_EQ(pfs[0].filename(), "ALTAr.lin");
     EXPECT_EQ(pfs[1].filename(), "altar_portalL_544_64_112.lin");
 }
 

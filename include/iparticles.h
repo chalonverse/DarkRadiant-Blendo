@@ -89,7 +89,7 @@ public:
 	virtual void swapParticleStages(std::size_t index, std::size_t index2) = 0;
 
     /// Signal emitted when some aspect of the particle def has changed
-    virtual sigc::signal<void> signal_changed() const = 0;
+    virtual sigc::signal<void>& signal_changed() = 0;
 
 	// Comparison operators - particle defs are considered equal if all properties (except the name!),
 	// number of stages and stage contents are the equal
@@ -119,8 +119,10 @@ public:
 	 * the current render time.
 	 *
 	 * @viewRotation: the matrix to orient themselves to the viewer.
+     * @localToWorld: the combined transform of local to world coordinates
+     * @entity: the parent entity
 	 */
-	virtual void update(const Matrix4& viewRotation) = 0;
+	virtual void update(const Matrix4& viewRotation, const Matrix4& localToWorld, IRenderEntity* entity) = 0;
 		
 	/**
 	 * Get the particle definition used by this renderable.
@@ -174,7 +176,7 @@ class IParticlesManager :
 public:
 
     /// Signal emitted when particle definitions are reloaded
-    virtual sigc::signal<void> signal_particlesReloaded() const = 0;
+    virtual sigc::signal<void>& signal_particlesReloaded() = 0;
 
 	/// Enumerate each particle def.
 	virtual void forEachParticleDef(const ParticleDefVisitor&) = 0;

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <memory>
+#include "math/Vector3.h"
 
+class ArbitraryMeshVertex;
 class Shader;
 typedef std::shared_ptr<Shader> ShaderPtr;
 
@@ -9,77 +11,33 @@ class RenderSystem;
 typedef std::shared_ptr<RenderSystem> RenderSystemPtr;
 
 class OpenGLRenderable;
-class LightSources;
 class Matrix4;
 class IRenderEntity;
 class RendererLight;
-class LitObject;
+class Renderable;
+class VolumeTest;
 
 /**
- * \brief Class which accepts OpenGLRenderable objects during the first pass of
- * rendering.
- *
- * Each Renderable in the scenegraph is passed a reference to a
- * RenderableCollector, to which the Renderable submits its OpenGLRenderable(s)
- * for later rendering. A single Renderable may submit more than one
- * OpenGLRenderable, with different options each time -- for instance a
- * Renderable model class may submit each of its material surfaces separately
- * with different shaders.
+ * \brief Class used during the front-end render pass.
+ * 
+ * Each node in the scenegraph is visited and is asked to get ready for rendering
+ * by calling Renderable.onPreRender() method.
+ * 
+ * If a node's highlight flags (which combined with their parents flags) indicates
+ * that the node needs to render special visual aids like selection overlays,
+ * the node's Renderable::renderHighlights() method is invoked.
  */
-class RenderableCollector
+class IRenderableCollector
 {
 public:
-    virtual ~RenderableCollector() {}
+    virtual ~IRenderableCollector() {}
 
     /**
-     * \brief Submit a renderable object.
-     *
-     * This method allows renderable geometry to be submitted under the control
-     * of a LitObject which will determine whether and how the renderable is
-     * illuminated by scene lights. Each objected submitted with this method
-     * will be considered for lighting by the lights which are submitted to the
-     * same RenderableCollector using addLight().
-     *
-     * Objects may be submitted without a LitObject if they are not affected by
-     * scene lights.
-     *
-     * \param shader
-     * The Shader object this Renderable will be attached to.
-     *
-     * \param renderable
-     * The renderable object to submit.
-     *
-     * \param localToWorld
-     * The local to world transform that should be applied to this object when
-     * it is rendered.
-     *
-     * \param entity
-     * Optional IRenderEntity exposing parameters which affect the rendering of
-     * this Renderable.
-     *
-     * \param litObject
-     * Optional LitObject determining lighting interactions for this
-     * renderable. This may or may not be the same actual object as the
-     * OpenGLRenderable, depending on how the object class hierarchy is set up.
-     * If a single LitObject contains multiple renderables, a separate call to
-     * this method must be made for each renderable (with the same litObject
-     * parameter).
+     * Submits a renderable object that is used for highlighting an object.
+     * Depending on the view, this might be a coloured, transparent overlay
+     * or a wireframe outline.
      */
-    virtual void addRenderable(Shader& shader,
-                               const OpenGLRenderable& renderable,
-                               const Matrix4& localToWorld,
-                               const LitObject* litObject = nullptr,
-                               const IRenderEntity* entity = nullptr) = 0;
-
-    /**
-     * \brief Submit a light source for the render operation.
-     *
-     * This is the entry point for lights into the render front-end. Each light
-     * in the scene graph must be submitted through this method in order to
-     * provide light for the final render. If the render is in wireframe mode,
-     * light sources can still be submitted but they will not have any effect.
-     */
-    virtual void addLight(const RendererLight& light) = 0;
+    virtual void addHighlightRenderable(const OpenGLRenderable& renderable, const Matrix4& localToWorld) = 0;
 
     /**
      * \brief Determine if this RenderableCollector can accept renderables for
@@ -108,9 +66,10 @@ public:
     };
 
     virtual void setHighlightFlag(Highlight::Flags flags, bool enabled) = 0;
-};
 
-class VolumeTest;
+    // Returns true if the current set of highlight flags is not empty
+    virtual bool hasHighlightFlags() const = 0;
+};
 
 /**
  * \brief
@@ -133,19 +92,14 @@ public:
      */
     virtual void setRenderSystem(const RenderSystemPtr& renderSystem) = 0;
 
-    /// Submit renderable geometry when rendering in Solid mode.
-    virtual void renderSolid(RenderableCollector& collector,
-                             const VolumeTest& volume) const = 0;
+    /** 
+     * Front-end rendering / preparation phase. The node prepares for rendering
+     * by attaching their geometry or surface data to the necessary shader instances.
+     **/
+    virtual void onPreRender(const VolumeTest& volume) = 0;
 
-    /// Submit renderable geometry when rendering in Wireframe mode.
-    virtual void renderWireframe(RenderableCollector& collector,
-                                 const VolumeTest& volume) const = 0;
-
-    virtual void renderComponents(RenderableCollector&, const VolumeTest&) const
-    { }
-
-    virtual void viewChanged() const
-    { }
+    // Submit renderable geometry for highlighting the object
+    virtual void renderHighlights(IRenderableCollector& collector, const VolumeTest& volume) = 0;
 
     struct Highlight
     {
