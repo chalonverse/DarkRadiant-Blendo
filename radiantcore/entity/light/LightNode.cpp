@@ -338,6 +338,7 @@ void LightNode::onPreRender(const VolumeTest& volume)
 
     // Pick the colour shader according to our settings
     const auto& colourShader = _overrideColKey.get() ? getColourShader() : _colourKey.getColourShader();
+    _renderableOctagon.queueUpdate();
     _renderableOctagon.update(colourShader);
 
     bool lightIsSelected = isSelected();
