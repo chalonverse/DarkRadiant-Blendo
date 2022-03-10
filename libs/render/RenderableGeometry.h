@@ -161,7 +161,7 @@ public:
     {
         if (_renderEntity == entity) return; // nothing to do
 
-        if (!_shader)
+        if (!_shader && (_lastVertexSize > 0 || _lastIndexSize > 0)) // SW: Hacky fix to avoid throwing when particle preview submits empty geo
         {
             throw std::logic_error("Cannot attach geometry without any shader");
         }
