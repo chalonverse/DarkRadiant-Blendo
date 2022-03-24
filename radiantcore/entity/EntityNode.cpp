@@ -159,6 +159,7 @@ void EntityNode::createAttachedEntities()
 void EntityNode::transformChanged()
 {
     Node::transformChanged();
+    TargetableNode::onTransformationChanged();
 
     // Broadcast transformChanged to all attached entities so they can update
     // their position
@@ -477,6 +478,7 @@ std::size_t EntityNode::getHighlightFlags()
 void EntityNode::onVisibilityChanged(bool isVisibleNow)
 {
     SelectableNode::onVisibilityChanged(isVisibleNow);
+    TargetableNode::onVisibilityChanged(isVisibleNow);
 
     for (const auto& [node, _] : _attachedEnts)
     {

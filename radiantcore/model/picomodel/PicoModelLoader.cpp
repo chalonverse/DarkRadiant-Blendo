@@ -31,7 +31,7 @@ namespace
         {
             return Vector4(array[0] / 255.0f, array[1] / 255.0f, array[2] / 255.0f, array[3] / 255.0f);
         }
-        
+
         return Vector4(1.0, 1.0, 1.0, 1.0); // white
     }
 } // namespace
@@ -215,12 +215,12 @@ StaticModelSurfacePtr PicoModelLoader::CreateSurface(picoSurface_t* picoSurface,
     // vectors in advance by populating them with empty structs.
     auto numVertices = PicoGetSurfaceNumVertexes(picoSurface);
     unsigned int numIndices = PicoGetSurfaceNumIndexes(picoSurface);
-    
+
     std::shared_ptr<StaticModelSurface> staticSurface;
 
     {
         // Allocate the vectors that will be moved to the surface at end of scope
-        std::vector<ArbitraryMeshVertex> vertices(numVertices);
+        std::vector<MeshVertex> vertices(numVertices);
         std::vector<unsigned int> indices(numIndices);
 
         // Stream in the vertex data from the raw struct, expanding the local AABB
@@ -228,9 +228,9 @@ StaticModelSurfacePtr PicoModelLoader::CreateSurface(picoSurface_t* picoSurface,
         for (int vNum = 0; vNum < numVertices; ++vNum) {
 
             // Get the vertex position and colour
-            Vertex3f vertex(PicoGetSurfaceXYZ(picoSurface, vNum));
+            Vertex3 vertex(PicoGetSurfaceXYZ(picoSurface, vNum));
 
-            Normal3f normal = PicoGetSurfaceNormal(picoSurface, vNum);
+            Normal3 normal = PicoGetSurfaceNormal(picoSurface, vNum);
 
             vertices[vNum].vertex = vertex;
             vertices[vNum].normal = normal;

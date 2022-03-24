@@ -21,7 +21,7 @@ TEST_F(ModelExportTest, ExportPatchMesh)
     // Load a map with a cylinder patch
     loadMap("modelexport_patch.map");
 
-    auto patchNode = algorithm::findFirstPatchWithMaterial(GlobalMapModule().findOrInsertWorldspawn(), 
+    auto patchNode = algorithm::findFirstPatchWithMaterial(GlobalMapModule().findOrInsertWorldspawn(),
         "textures/darkmod/wood/boards/ship_hull_medium");
     EXPECT_TRUE(patchNode);
 
@@ -49,7 +49,7 @@ TEST_F(ModelExportTest, ExportPatchMesh)
     GlobalCommandSystem().executeCommand("ExportSelectedAsModel", argList);
 
     auto model = GlobalModelCache().getModel(modRelativePath);
-    
+
     EXPECT_TRUE(model);
 
     // We expect exactly the same amount of vertices as in the patch mesh
@@ -83,13 +83,13 @@ TEST_F(ModelExportTest, ExportFolderNotExisting)
 
     constexpr const char* filename = "test.lwo";
     auto outputPath = outputFolder / filename;
-    
+
     EXPECT_NO_THROW(exporter->exportToPath(outputFolder.string(), filename)) << "Exporter failed to export to " << outputPath;
 
     EXPECT_TRUE(fs::exists(outputPath)) << "Exporter didn't create the file " << outputPath;
 }
 
-inline bool surfaceHasVertex(const model::IModelSurface& surface, const std::function<bool(const ArbitraryMeshVertex&)>& functor)
+inline bool surfaceHasVertex(const model::IModelSurface& surface, const std::function<bool(const MeshVertex&)>& functor)
 {
     for (int i = 0; i < surface.getNumVertices(); ++i)
     {
@@ -160,15 +160,15 @@ inline void checkVertexColoursOfExportedModel(const model::IModelExporterPtr& ex
         EXPECT_EQ(surface.getNumVertices(), 3);
 
         // The three colours we exported need to be present in the mesh
-        EXPECT_TRUE(surfaceHasVertex(surface, [&](const ArbitraryMeshVertex& vertex)
+        EXPECT_TRUE(surfaceHasVertex(surface, [&](const MeshVertex& vertex)
         {
             return math::isNear(vertex.colour, VertexColour1, 0.01);
         }));
-        EXPECT_TRUE(surfaceHasVertex(surface, [&](const ArbitraryMeshVertex& vertex)
+        EXPECT_TRUE(surfaceHasVertex(surface, [&](const MeshVertex& vertex)
         {
             return math::isNear(vertex.colour, VertexColour2, 0.01);
         }));
-        EXPECT_TRUE(surfaceHasVertex(surface, [&](const ArbitraryMeshVertex& vertex)
+        EXPECT_TRUE(surfaceHasVertex(surface, [&](const MeshVertex& vertex)
         {
             return math::isNear(vertex.colour, VertexColour3, 0.01);
         }));
@@ -193,9 +193,9 @@ TEST_F(ModelExportTest, LwoVertexColoursAddedByPolygon)
 
     polys.emplace_back(model::ModelPolygon
     {
-        ArbitraryMeshVertex(Vertex3f(1,0,0), Normal3f(1,0,0), TexCoord2f(1,0), VertexColour1),
-        ArbitraryMeshVertex(Vertex3f(0,1,0), Normal3f(1,0,0), TexCoord2f(0,0), VertexColour2),
-        ArbitraryMeshVertex(Vertex3f(1,1,0), Normal3f(1,0,0), TexCoord2f(1,0), VertexColour3)
+        MeshVertex(Vertex3(1,0,0), Normal3(1,0,0), TexCoord2f(1,0), VertexColour1),
+        MeshVertex(Vertex3(0,1,0), Normal3(1,0,0), TexCoord2f(0,0), VertexColour2),
+        MeshVertex(Vertex3(1,1,0), Normal3(1,0,0), TexCoord2f(1,0), VertexColour3)
     });
 
     exporter->addPolygons(CustomMaterialName, polys, Matrix4::getIdentity());
@@ -207,7 +207,7 @@ class TestModelSurface :
     public model::IIndexedModelSurface
 {
 public:
-    std::vector<ArbitraryMeshVertex> vertices;
+    std::vector<MeshVertex> vertices;
     std::vector<unsigned int> indices;
 
     int getNumVertices() const override
@@ -220,11 +220,11 @@ public:
         return static_cast<int>(indices.size() / 3);
     }
 
-    const ArbitraryMeshVertex& getVertex(int vertexNum) const override
+    const MeshVertex& getVertex(int vertexNum) const override
     {
         return vertices[vertexNum];
     }
-    
+
     model::ModelPolygon getPolygon(int polygonNum) const override
     {
         return model::ModelPolygon
@@ -234,22 +234,22 @@ public:
             vertices[polygonNum * 3 + 2]
         };
     }
-    
+
     const std::string& getDefaultMaterial() const override
     {
         return CustomMaterialName;
     }
-    
+
     const std::string& getActiveMaterial() const override
     {
         return getDefaultMaterial();
     }
-    
-    const std::vector<ArbitraryMeshVertex>& getVertexArray() const override
+
+    const std::vector<MeshVertex>& getVertexArray() const override
     {
         return vertices;
     }
-    
+
     const std::vector<unsigned int>& getIndexArray() const override
     {
         return indices;
@@ -277,13 +277,13 @@ TEST_F(ModelExportTest, LwoVertexColoursAddedBySurface)
     // Create a few vertices with custom colours
     TestModelSurface surface;
 
-    surface.vertices.emplace_back(Vertex3f(1, 0, 0), Normal3f(1, 0, 0), TexCoord2f(1, 0), VertexColour1);
-    surface.vertices.emplace_back(Vertex3f(0, 1, 0), Normal3f(1, 0, 0), TexCoord2f(0, 0), VertexColour2);
-    surface.vertices.emplace_back(Vertex3f(1, 1, 0), Normal3f(1, 0, 0), TexCoord2f(1, 0), VertexColour3);
+    surface.vertices.emplace_back(Vertex3(1, 0, 0), Normal3(1, 0, 0), TexCoord2f(1, 0), VertexColour1);
+    surface.vertices.emplace_back(Vertex3(0, 1, 0), Normal3(1, 0, 0), TexCoord2f(0, 0), VertexColour2);
+    surface.vertices.emplace_back(Vertex3(1, 1, 0), Normal3(1, 0, 0), TexCoord2f(1, 0), VertexColour3);
     surface.indices.push_back(0);
     surface.indices.push_back(1);
     surface.indices.push_back(2);
-    
+
     exporter->addSurface(surface, Matrix4::getIdentity());
 
     checkVertexColoursOfExportedModel(exporter, _context.getTestProjectPath());
@@ -469,7 +469,7 @@ TEST_F(ModelExportTest, ExportedModelInheritsSpawnargs)
 
     // This one should not have been inherited, it was belonging to the other entity
     EXPECT_EQ(newEntity->getKeyValue("henrys_key"), "");
-    
+
     fs::remove(fullModelPath);
 }
 

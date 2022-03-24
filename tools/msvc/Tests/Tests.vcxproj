@@ -71,6 +71,7 @@
     <ClInclude Include="..\..\..\test\TdmMissionSetup.h" />
     <ClInclude Include="..\..\..\test\TestContext.h" />
     <ClInclude Include="..\..\..\test\TestLogFile.h" />
+    <ClInclude Include="..\..\..\test\testutil\TestBufferObjectProvider.h" />
     <ClInclude Include="..\..\..\test\testutil\FileSelectionHelper.h" />
   </ItemGroup>
   <ItemGroup>
@@ -84,6 +85,7 @@
     <ClCompile Include="..\..\..\test\EntityInspector.cpp" />
     <ClCompile Include="..\..\..\test\Favourites.cpp" />
     <ClCompile Include="..\..\..\test\FileTypes.cpp" />
+    <ClCompile Include="..\..\..\test\GeometryStore.cpp" />
     <ClCompile Include="..\..\..\test\Grid.cpp" />
     <ClCompile Include="..\..\..\test\HeadlessOpenGLContext.cpp" />
     <ClCompile Include="..\..\..\test\ImageLoading.cpp" />

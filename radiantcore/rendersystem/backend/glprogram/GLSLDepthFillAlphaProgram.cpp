@@ -24,18 +24,22 @@ void GLSLDepthFillAlphaProgram::create()
         DEPTHFILL_ALPHA_VP_FILENAME, DEPTHFILL_ALPHA_FP_FILENAME
     );
 
-    glBindAttribLocation(_programObj, GLProgramAttribute::TexCoord, "attr_TexCoord0");
+    glBindAttribLocation(_programObj, GLProgramAttribute::Position, "attr_Position");
+    glBindAttribLocation(_programObj, GLProgramAttribute::TexCoord, "attr_TexCoord");
 
     glLinkProgram(_programObj);
 
     debug::assertNoGlErrors();
 
-    _locAlphaTest = glGetUniformLocation(_programObj, "u_alpha_test");
+    _locAlphaTest = glGetUniformLocation(_programObj, "u_AlphaTest");
+    _locObjectTransform = glGetUniformLocation(_programObj, "u_ObjectTransform");
+    _locModelViewProjection = glGetUniformLocation(_programObj, "u_ModelViewProjection");
+    _locDiffuseTextureMatrix = glGetUniformLocation(_programObj, "u_DiffuseTextureMatrix");
 
     glUseProgram(_programObj);
     debug::assertNoGlErrors();
 
-    GLint samplerLoc = glGetUniformLocation(_programObj, "u_diffuse");
+    auto samplerLoc = glGetUniformLocation(_programObj, "u_Diffuse");
     glUniform1i(samplerLoc, 0);
 
     debug::assertNoGlErrors();
@@ -45,29 +49,36 @@ void GLSLDepthFillAlphaProgram::enable()
 {
     GLSLProgramBase::enable();
 
-    glEnableVertexAttribArrayARB(GLProgramAttribute::TexCoord);
+    glEnableVertexAttribArray(GLProgramAttribute::Position);
+    glEnableVertexAttribArray(GLProgramAttribute::TexCoord);
 }
 
 void GLSLDepthFillAlphaProgram::disable()
 {
     GLSLProgramBase::disable();
 
-    glDisableVertexAttribArrayARB(GLProgramAttribute::TexCoord);
+    glDisableVertexAttribArray(GLProgramAttribute::Position);
+    glDisableVertexAttribArray(GLProgramAttribute::TexCoord);
 }
 
-void GLSLDepthFillAlphaProgram::applyAlphaTest(float alphaTest)
+void GLSLDepthFillAlphaProgram::setAlphaTest(float alphaTest)
 {
     glUniform1f(_locAlphaTest, alphaTest);
+}
 
-    debug::assertNoGlErrors();
+void GLSLDepthFillAlphaProgram::setModelViewProjection(const Matrix4& modelViewProjection)
+{
+    loadMatrixUniform(_locModelViewProjection, modelViewProjection);
+}
 
-    glActiveTexture(GL_TEXTURE0);
-    glClientActiveTexture(GL_TEXTURE0);
+void GLSLDepthFillAlphaProgram::setObjectTransform(const Matrix4& transform)
+{
+    loadMatrixUniform(_locObjectTransform, transform);
+}
 
-    glMatrixMode(GL_TEXTURE);
-    glLoadIdentity();
-    
-    debug::assertNoGlErrors();
+void GLSLDepthFillAlphaProgram::setDiffuseTextureTransform(const Matrix4& transform)
+{
+    loadTextureMatrixUniform(_locDiffuseTextureMatrix, transform);
 }
 
 }

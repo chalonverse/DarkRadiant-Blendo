@@ -11,7 +11,10 @@
 namespace render
 {
 
+class OpenGLState;
 class OpenGLShader;
+class GLSLDepthFillAlphaProgram;
+class GLSLBumpProgram;
 
 /**
  * Defines interactions between a light and one or more entity renderables
@@ -36,7 +39,8 @@ private:
     // object mappings, grouped by entity
     std::map<IRenderEntity*, ObjectsByMaterial> _objectsByEntity;
 
-    std::size_t _drawCalls;
+    std::size_t _interactionDrawCalls;
+    std::size_t _depthDrawCalls;
     std::size_t _objectCount;
 
 public:
@@ -44,13 +48,19 @@ public:
         _light(light),
         _store(store),
         _lightBounds(light.lightAABB()),
-        _drawCalls(0),
+        _interactionDrawCalls(0),
+        _depthDrawCalls(0),
         _objectCount(0)
     {}
 
-    std::size_t getDrawCalls() const
+    std::size_t getInteractionDrawCalls() const
     {
-        return _drawCalls;
+        return _interactionDrawCalls;
+    }
+
+    std::size_t getDepthDrawCalls() const
+    {
+        return _depthDrawCalls;
     }
 
     std::size_t getObjectCount() const
@@ -67,13 +77,12 @@ public:
 
     bool isInView(const IRenderView& view);
 
-    void collectSurfaces(const std::set<IRenderEntityPtr>& entities);
+    void collectSurfaces(const IRenderView& view, const std::set<IRenderEntityPtr>& entities);
 
-    void fillDepthBuffer(OpenGLState& current, RenderStateFlags globalFlagsMask, 
-        const IRenderView& view, std::size_t renderTime);
+    void fillDepthBuffer(OpenGLState& state, GLSLDepthFillAlphaProgram& program, 
+        const IRenderView& view, std::size_t renderTime, std::vector<IGeometryStore::Slot>& untransformedObjectsWithoutAlphaTest);
 
-    void render(OpenGLState& state, RenderStateFlags globalFlagsMask, 
-        const IRenderView& view, std::size_t renderTime);
+    void drawInteractions(OpenGLState& state, GLSLBumpProgram& program, const IRenderView& view, std::size_t renderTime);
 };
 
 }

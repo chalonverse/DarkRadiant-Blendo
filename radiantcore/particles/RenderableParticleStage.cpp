@@ -77,15 +77,16 @@ void RenderableParticleStage::submitGeometry(const ShaderPtr& shader, const Matr
 
 void RenderableParticleStage::updateGeometry()
 {
-    std::vector<ArbitraryMeshVertex> vertices;
+    std::vector<render::RenderVertex> vertices;
     std::vector<unsigned int> indices;
 
-    auto numQuads = (_bunches[0] ? _bunches[0]->getNumQuads() : 0) + 
+    auto numQuads = (_bunches[0] ? _bunches[0]->getNumQuads() : 0) +
                     (_bunches[1] ? _bunches[1]->getNumQuads() : 0);
 
     if (numQuads == 0)
     {
-        RenderableGeometry::updateGeometry(render::GeometryType::Triangles, vertices, indices);
+        updateGeometryWithData(render::GeometryType::Triangles, vertices,
+                                                   indices);
         return;
     }
 
@@ -102,7 +103,7 @@ void RenderableParticleStage::updateGeometry()
         _bunches[1]->addVertexData(vertices, indices, _localToWorld);
     }
 
-    RenderableGeometry::updateGeometry(render::GeometryType::Triangles, vertices, indices);
+    updateGeometryWithData(render::GeometryType::Triangles, vertices, indices);
 }
 
 const AABB& RenderableParticleStage::getBounds()

@@ -38,7 +38,7 @@ public:
         return !_surface.getIndexArray().empty();
     }
 
-    const std::vector<ArbitraryMeshVertex>& getVertices() override
+    const std::vector<MeshVertex>& getVertices() override
     {
         return _surface.getVertexArray();
     }
@@ -46,6 +46,11 @@ public:
     const std::vector<unsigned int>& getIndices() override
     {
         return _surface.getIndexArray();
+    }
+
+    bool isOriented() override
+    {
+        return true;
     }
 
     const Matrix4& getObjectTransform() override

@@ -40,22 +40,22 @@ protected:
             return;
         }
 
-        std::vector<ArbitraryMeshVertex> vertices;
+        std::vector<render::RenderVertex> vertices;
         std::vector<unsigned int> indices;
 
         static const Vector4 SelectedColour(0, 0, 0, 1);
         static const Vector4 DeselectedColour(0, 1, 0, 1);
-        
+
         auto i = 0;
 
         _instance.forEachControlPoint([&](const Vector3& position, bool isSelected)
         {
-            vertices.push_back(ArbitraryMeshVertex(position, { 0, 0, 0 }, { 0, 0 },
+            vertices.push_back(render::RenderVertex(position, { 0, 0, 0 }, { 0, 0 },
                 isSelected ? SelectedColour : DeselectedColour));
             indices.push_back(static_cast<unsigned int>(i++));
         });
 
-        RenderableGeometry::updateGeometry(render::GeometryType::Points, vertices, indices);
+        updateGeometryWithData(render::GeometryType::Points, vertices, indices);
     }
 };
 

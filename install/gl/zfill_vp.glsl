@@ -1,37 +1,24 @@
-/// ============================================================================
-/*
-Copyright (C) 2004 Robert Beckebans <trebor_7@users.sourceforge.net>
-Please see the file "CONTRIBUTORS" for a list of contributors
+#version 140
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+in vec4 attr_Position; // bound to attribute 0 in source, in object space
+in vec4 attr_TexCoord; // bound to attribute 8 in source
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+uniform mat4 u_ModelViewProjection; // combined modelview and projection matrix
+uniform mat4 u_ObjectTransform; // object transform (object2world)
 
-See the GNU Lesser General Public License for more details.
+// The two top-rows of the diffuse stage texture transformation matrix
+uniform vec4 u_DiffuseTextureMatrix[2];
 
-You should have received a copy of the GNU Lesser General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-*/
-/// ============================================================================
+// The final diffuse texture coordinate at this vertex
+varying vec2 var_TexDiffuse;
 
-attribute vec4		attr_TexCoord0;
-
-varying vec2		var_tex_diffuse;
-
-void	main()
+void main()
 {
-	// transform vertex position into homogenous clip-space
-	gl_Position = ftransform();
+    // Apply the supplied object transform to the incoming vertex
+    // transform vertex position into homogenous clip-space
+    gl_Position = u_ModelViewProjection * u_ObjectTransform * attr_Position;
 
-	// transform texcoords
-	var_tex_diffuse = (gl_TextureMatrix[0] * attr_TexCoord0).st;
-
-	// assign color
-	gl_FrontColor = gl_Color;
+    // Apply the stage texture transform to the incoming tex coord, component wise
+    var_TexDiffuse.x = dot(u_DiffuseTextureMatrix[0], attr_TexCoord);
+    var_TexDiffuse.y = dot(u_DiffuseTextureMatrix[1], attr_TexCoord);
 }

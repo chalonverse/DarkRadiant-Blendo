@@ -391,9 +391,6 @@
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.cpp">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillProgram.cpp">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\radiantcore\rendersystem\debug\SpacePartitionRenderer.cpp">
       <Filter>src\rendersystem\debug</Filter>
     </ClCompile>
@@ -1428,9 +1425,6 @@
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.h">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillProgram.h">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\debug\SpacePartitionRenderer.h">
       <Filter>src\rendersystem\debug</Filter>
     </ClInclude>
@@ -1843,9 +1837,6 @@
       <Filter>src\brush</Filter>
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\brush\PlanePoints.h">
-      <Filter>src\brush</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\radiantcore\brush\RenderableWireFrame.h">
       <Filter>src\brush</Filter>
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\brush\SelectableComponents.h">
@@ -2328,9 +2319,6 @@
     <ClInclude Include="..\..\radiantcore\entity\RenderableObjectCollection.h">
       <Filter>src\entity</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\GeometryStore.h">
-      <Filter>src\rendersystem\backend</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLCubeMapProgram.h">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
@@ -2357,6 +2345,18 @@
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\skins\SkinDeclParser.h">
       <Filter>src\skins</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\WindingRenderer.h">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\FenceSyncProvider.h">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\BufferObjectProvider.h">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\OpenGLState.h">
+      <Filter>src\rendersystem\backend</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

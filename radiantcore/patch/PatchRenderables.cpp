@@ -13,7 +13,7 @@ inline Vector4 getControlPointVertexColour(std::size_t i, std::size_t width)
 
 }
 
-RenderablePatchControlPoints::RenderablePatchControlPoints(const IPatch& patch, 
+RenderablePatchControlPoints::RenderablePatchControlPoints(const IPatch& patch,
     const std::vector<PatchControlInstance>& controlPoints) :
     _patch(patch),
     _controlPoints(controlPoints),
@@ -27,7 +27,7 @@ void RenderablePatchControlPoints::updateGeometry()
     _needsUpdate = false;
 
     // Generate the new point vector
-    std::vector<ArbitraryMeshVertex> vertices;
+    std::vector<render::RenderVertex> vertices;
     std::vector<unsigned int> indices;
 
     vertices.reserve(_controlPoints.size());
@@ -40,10 +40,10 @@ void RenderablePatchControlPoints::updateGeometry()
     {
         const auto& ctrl = _controlPoints[i];
 
-        vertices.push_back(ArbitraryMeshVertex(ctrl.control.vertex, { 0, 0, 0 }, { 0, 0 },
+        vertices.push_back(render::RenderVertex(ctrl.control.vertex, { 0, 0, 0 }, { 0, 0 },
             ctrl.isSelected() ? SelectedColour : detail::getControlPointVertexColour(i, width)));
         indices.push_back(static_cast<unsigned int>(i));
     }
 
-    RenderableGeometry::updateGeometry(render::GeometryType::Points, vertices, indices);
+    updateGeometryWithData(render::GeometryType::Points, vertices, indices);
 }

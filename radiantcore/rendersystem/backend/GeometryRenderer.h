@@ -70,7 +70,7 @@ public:
         return true;
     }
 
-    Slot addGeometry(GeometryType indexType, const std::vector<ArbitraryMeshVertex>& vertices,
+    Slot addGeometry(GeometryType indexType, const std::vector<RenderVertex>& vertices,
         const std::vector<unsigned int>& indices) override
     {
         auto groupIndex = GetGroupIndexForIndexType(indexType);
@@ -81,7 +81,8 @@ public:
         auto& slot = _slots.at(newSlotIndex);
 
         // Save the data into the backend storage
-        slot.storageHandle = _store.allocateSlot(vertices, indices);
+        slot.storageHandle = _store.allocateSlot(vertices.size(), indices.size());
+        _store.updateData(slot.storageHandle, vertices, indices);
         group.storageHandles.insert(slot.storageHandle);
 
         slot.groupIndex = groupIndex;
@@ -109,7 +110,7 @@ public:
         }
     }
 
-    void updateGeometry(Slot slot, const std::vector<ArbitraryMeshVertex>& vertices,
+    void updateGeometry(Slot slot, const std::vector<RenderVertex>& vertices,
         const std::vector<unsigned int>& indices) override
     {
         auto& slotInfo = _slots.at(slot);
@@ -138,7 +139,17 @@ public:
         auto& slotInfo = _slots.at(slot);
         auto& group = getGroupByIndex(slotInfo.groupIndex);
 
+        auto renderParms = _store.getRenderParameters(slotInfo.storageHandle);
+
+        auto [vertexBuffer, indexBuffer] = _store.getBufferObjects();
+        vertexBuffer->bind();
+        indexBuffer->bind();
+
+        ObjectRenderer::InitAttributePointers(renderParms.bufferStart);
         ObjectRenderer::SubmitGeometry(slotInfo.storageHandle, group.primitiveMode, _store);
+
+        vertexBuffer->unbind();
+        indexBuffer->unbind();
     }
 
     IGeometryStore::Slot getGeometryStorageLocation(Slot slot) override
