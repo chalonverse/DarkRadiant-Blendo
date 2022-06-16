@@ -11,6 +11,8 @@ uniform vec4 u_ColourModulation;    // vertex colour weight
 uniform vec4 u_ColourAddition;      // constant additive vertex colour value
 uniform mat4 u_ModelViewProjection; // combined modelview and projection matrix
 uniform mat4 u_ObjectTransform;     // object to world
+uniform vec3 u_WorldLightOrigin;    // light origin in world space
+uniform vec3 u_LocalViewOrigin;     // view origin in local space
 
 // Texture Matrices (the two top rows of each)
 uniform vec4 u_DiffuseTextureMatrix[2];
@@ -25,10 +27,12 @@ varying vec2 var_TexDiffuse;
 varying vec2 var_TexBump;
 varying vec2 var_TexSpecular;
 
-varying vec3		var_vertex;
-varying vec4		var_tex_atten_xy_z;
-varying mat3		var_mat_os2ts;
-varying vec4		var_Colour; // colour to be multiplied on the final fragment
+varying vec3 var_vertex;
+varying vec4 var_tex_atten_xy_z;
+varying mat3 var_mat_os2ts;
+varying vec4 var_Colour; // colour to be multiplied on the final fragment
+varying vec3 var_WorldLightDirection; // direction the light is coming from in world space
+varying vec3 var_LocalViewerDirection; // viewer direction in local space
 
 void main()
 {
@@ -36,6 +40,9 @@ void main()
 
 	// transform vertex position into homogenous clip-space
 	gl_Position = u_ModelViewProjection * worldVertex;
+
+    // The position of the vertex in light space (used in shadow mapping)
+    var_WorldLightDirection = worldVertex.xyz - u_WorldLightOrigin;
 
 	// assign position in world space
 	var_vertex = worldVertex.xyz;
@@ -59,6 +66,9 @@ void main()
          attr_Tangent.y, attr_Bitangent.y, attr_Normal.y,
          attr_Tangent.z, attr_Bitangent.z, attr_Normal.z
     );
+
+    // Calculate the viewer direction in local space (attr_Position is already in local space)
+    var_LocalViewerDirection = u_LocalViewOrigin - attr_Position.xyz;
 
     // Vertex colour factor
     var_Colour = (attr_Colour * u_ColourModulation + u_ColourAddition);

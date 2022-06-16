@@ -27,26 +27,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
@@ -188,7 +188,6 @@
     <ClInclude Include="..\..\libs\ObservedUndoable.h" />
     <ClInclude Include="..\..\libs\os\dir.h" />
     <ClInclude Include="..\..\libs\os\file.h" />
-    <ClInclude Include="..\..\libs\os\filesize.h" />
     <ClInclude Include="..\..\libs\os\fs.h" />
     <ClInclude Include="..\..\libs\os\path.h" />
     <ClInclude Include="..\..\libs\parser\CodeTokeniser.h" />
@@ -218,6 +217,7 @@
     <ClInclude Include="..\..\libs\render\MeshVertex.h" />
     <ClInclude Include="..\..\libs\render\NopRenderView.h" />
     <ClInclude Include="..\..\libs\render\NopVolumeTest.h" />
+    <ClInclude Include="..\..\libs\render\Rectangle.h" />
     <ClInclude Include="..\..\libs\render\RenderableBoundingBoxes.h" />
     <ClInclude Include="..\..\libs\render\RenderableBox.h" />
     <ClInclude Include="..\..\libs\render\RenderableCollectionWalker.h" />
@@ -241,6 +241,7 @@
     <ClInclude Include="..\..\libs\render\VertexNCb.h" />
     <ClInclude Include="..\..\libs\render\VertexNT.h" />
     <ClInclude Include="..\..\libs\render\View.h" />
+    <ClInclude Include="..\..\libs\render\WindingRenderer.h" />
     <ClInclude Include="..\..\libs\RGBAImage.h" />
     <ClInclude Include="..\..\libs\scenelib.h" />
     <ClInclude Include="..\..\libs\selectionlib.h" />
@@ -255,6 +256,8 @@
     <ClInclude Include="..\..\libs\selection\SelectionVolume.h" />
     <ClInclude Include="..\..\libs\selection\SingleItemSelector.h" />
     <ClInclude Include="..\..\libs\SequentialTaskQueue.h" />
+    <ClInclude Include="..\..\libs\settings\MajorMinorVersion.h" />
+    <ClInclude Include="..\..\libs\settings\SettingsManager.h" />
     <ClInclude Include="..\..\libs\shaderlib.h" />
     <ClInclude Include="..\..\libs\stream\BinaryToTextInputStream.h" />
     <ClInclude Include="..\..\libs\stream\BufferInputStream.h" />
@@ -270,6 +273,7 @@
     <ClInclude Include="..\..\libs\string\case_conv.h" />
     <ClInclude Include="..\..\libs\string\convert.h" />
     <ClInclude Include="..\..\libs\string\encoding.h" />
+    <ClInclude Include="..\..\libs\string\format.h" />
     <ClInclude Include="..\..\libs\string\join.h" />
     <ClInclude Include="..\..\libs\string\predicate.h" />
     <ClInclude Include="..\..\libs\string\replace.h" />

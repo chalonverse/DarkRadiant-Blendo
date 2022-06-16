@@ -133,21 +133,24 @@ bool PatchNode::selectedVertices() {
     return false;
 }
 
-void PatchNode::snapComponents(float snap) {
+void PatchNode::snapComponents(float snap)
+{
 	// Are there any selected vertices
-	if (selectedVertices()) {
-		// Tell the patch to save the current undo state
-		m_patch.undoSave();
+    if (!selectedVertices()) return;
 
-		// Cycle through all the selected control instances and snap them to the grid
-		for (PatchControlInstances::iterator i = m_ctrl_instances.begin(); i != m_ctrl_instances.end(); ++i) {
-			if(i->isSelected()) {
-				i->snapto(snap);
-			}
-		}
-		// Tell the patch that control points have changed
-		m_patch.controlPointsChanged();
-	}
+    // Cycle through all the selected control instances and snap them to the grid
+    for (auto& vertex : m_ctrl_instances)
+    {
+	    if (vertex.isSelected())
+        {
+            vertex.snapto(snap);
+	    }
+    }
+
+    // Save the transformed control point array to the real set
+    m_patch.freezeTransform();
+    // Tell the patch that control points have changed
+    m_patch.controlPointsChanged();
 }
 
 // Test the Patch instance for selection
@@ -283,6 +286,14 @@ void PatchNode::updateAllRenderables()
     _renderableCtrlPoints.queueUpdate();
 }
 
+void PatchNode::hideAllRenderables()
+{
+    _renderableSurfaceSolid.hide();
+    _renderableSurfaceWireframe.hide();
+    _renderableCtrlLattice.hide();
+    _renderableCtrlPoints.hide();
+}
+
 void PatchNode::clearAllRenderables()
 {
     _renderableSurfaceSolid.clear();
@@ -337,22 +348,14 @@ bool PatchNode::getIntersection(const Ray& ray, Vector3& intersection)
 
 void PatchNode::onPreRender(const VolumeTest& volume)
 {
-    // Don't do anything when invisible
-    if (!isForcedVisible() && !m_patch.hasVisibleMaterial()) return;
-
     // Defer the tesselation calculation to the last minute
     m_patch.evaluateTransform();
     m_patch.updateTesselation();
 
-    if (volume.fill())
-    {
-        _renderableSurfaceSolid.update(m_patch._shader.getGLShader());
-        _renderableSurfaceSolid.attachToEntity(_renderEntity);
-    }
-    else
-    {
-        _renderableSurfaceWireframe.update(_renderEntity->getWireShader());
-    }
+    _renderableSurfaceSolid.update(m_patch._shader.getGLShader());
+    _renderableSurfaceWireframe.update(_renderEntity->getWireShader());
+
+    _renderableSurfaceSolid.attachToEntity(_renderEntity);
 
     if (isSelected() && GlobalSelectionSystem().ComponentMode() == selection::ComponentSelectionMode::Vertex)
     {
@@ -362,8 +365,8 @@ void PatchNode::onPreRender(const VolumeTest& volume)
     }
     else
     {
-        _renderableCtrlPoints.clear();
-        _renderableCtrlLattice.clear();
+        _renderableCtrlPoints.hide();
+        _renderableCtrlLattice.hide();
 
         // Queue an update the next time it's rendered
         _renderableCtrlPoints.queueUpdate();
@@ -373,7 +376,17 @@ void PatchNode::onPreRender(const VolumeTest& volume)
 
 void PatchNode::renderHighlights(IRenderableCollector& collector, const VolumeTest& volume)
 {
-    // Overlay the selected node with the quadrangulated wireframe
+    if (GlobalSelectionSystem().Mode() != selection::SelectionSystem::eComponent)
+    {
+        // The coloured selection overlay should use the same triangulated surface to avoid z fighting
+        collector.setHighlightFlag(IRenderableCollector::Highlight::Faces, true);
+        collector.setHighlightFlag(IRenderableCollector::Highlight::Primitives, false);
+        collector.addHighlightRenderable(_renderableSurfaceSolid, localToWorld());
+    }
+
+    // The selection outline (wireframe) should use the quadrangulated surface
+    collector.setHighlightFlag(IRenderableCollector::Highlight::Faces, false);
+    collector.setHighlightFlag(IRenderableCollector::Highlight::Primitives, true);
     collector.addHighlightRenderable(_renderableSurfaceWireframe, localToWorld());
 }
 
@@ -387,7 +400,7 @@ void PatchNode::setRenderSystem(const RenderSystemPtr& renderSystem)
 
     if (renderSystem)
 	{
-        _ctrlPointShader = renderSystem->capture(BuiltInShaderType::Point);
+        _ctrlPointShader = renderSystem->capture(BuiltInShaderType::BigPoint);
         _ctrlLatticeShader = renderSystem->capture(BuiltInShaderType::PatchLattice);
 	}
 	else
@@ -502,12 +515,11 @@ void PatchNode::onVisibilityChanged(bool visible)
 
     if (!visible)
     {
-        // Disconnect our renderable when the node is hidden
-        clearAllRenderables();
+        hideAllRenderables();
     }
     else
     {
-        // Update the vertex buffers next time we need to render
+        // Queue an update, renderables are automatically shown in onPreRender
         updateAllRenderables();
     }
 }

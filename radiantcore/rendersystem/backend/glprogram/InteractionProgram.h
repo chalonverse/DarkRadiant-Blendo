@@ -6,8 +6,9 @@ namespace render
 {
 
 class OpenGLState;
+struct Rectangle;
 
-class GLSLBumpProgram :
+class InteractionProgram :
     public GLSLProgramBase
 {
 private:
@@ -15,7 +16,9 @@ private:
 	float _lightScale;
 
     // Uniform/program-local parameter IDs.
-    int _locLightOrigin;
+    int _locLocalLightOrigin;
+    int _locWorldLightOrigin;
+    int _locWorldUpLocal;
     int _locLightColour;
     int _locViewOrigin;
     int _locLightScale;
@@ -29,6 +32,9 @@ private:
     int _locBumpTextureMatrix;
     int _locSpecularTextureMatrix;
     int _locLightTextureMatrix;
+
+    int _locUseShadowMap;
+    int _locShadowMapRect;
 
 public:
 
@@ -47,16 +53,14 @@ public:
     // The stage's vertex colour mode and colour as defined by the rgba registers
     void setStageVertexColour(IShaderLayer::VertexColourMode vertexColourMode, const Colour4& stageColour);
 
-    void applyRenderParams(const Vector3& viewer,
-        const Matrix4& localToWorld,
-        const Params& lightParms) override
-    { }
-
     void setupLightParameters(OpenGLState& state, const RendererLight& light, std::size_t renderTime);
 
     void setUpObjectLighting(const Vector3& worldLightOrigin,
         const Vector3& viewer,
         const Matrix4& inverseObjectTransform);
+
+    void setShadowMapRectangle(const Rectangle& rectangle);
+    void enableShadowMapping(bool enable);
 };
 
 } // namespace render

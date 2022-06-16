@@ -2,7 +2,7 @@
 
 #include "GLProgramFactory.h"
 #include "../OpenGLRenderSystem.h"
-#include "glprogram/GLSLBumpProgram.h"
+#include "glprogram/InteractionProgram.h"
 
 namespace render
 {
@@ -20,10 +20,9 @@ inline void setInteractionStateFlags(OpenGLState& state, GLProgramFactory& progr
     state.setRenderFlag(RENDER_PROGRAM);
 
     state.glProgram = programFactory.getBuiltInProgram(ShaderProgram::Interaction);
-    assert(dynamic_cast<GLSLBumpProgram*>(state.glProgram));
+    assert(dynamic_cast<InteractionProgram*>(state.glProgram));
 
     state.setDepthFunc(GL_LEQUAL);
-    state.polygonOffset = 0.5f;
     state.setSortPosition(OpenGLState::SORT_INTERACTION);
     state.m_blend_src = GL_ONE;
     state.m_blend_dst = GL_ONE;

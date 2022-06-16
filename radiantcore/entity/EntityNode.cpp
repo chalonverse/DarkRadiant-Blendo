@@ -22,11 +22,13 @@ EntityNode::EntityNode(const IEntityClassPtr& eclass) :
     _originKey(std::bind(&EntityNode::_originKeyChanged, this)),
 	_nameKey(_spawnArgs),
 	_renderableName(*this, _nameKey),
+    _colourKey(std::bind(&EntityNode::_colourKeyChanged, this, std::placeholders::_1)),
 	_modelKey(*this),
 	_keyObservers(_spawnArgs),
 	_shaderParms(_keyObservers, _colourKey),
 	_direction(1,0,0),
-    _isAttachedToRenderSystem(false)
+    _isAttachedToRenderSystem(false),
+    _isShadowCasting(false)
 {
 }
 
@@ -44,11 +46,13 @@ EntityNode::EntityNode(const EntityNode& other) :
     _originKey(std::bind(&EntityNode::_originKeyChanged, this)),
 	_nameKey(_spawnArgs),
 	_renderableName(*this, _nameKey),
+    _colourKey(std::bind(&EntityNode::_colourKeyChanged, this, std::placeholders::_1)),
 	_modelKey(*this),
 	_keyObservers(_spawnArgs),
 	_shaderParms(_keyObservers, _colourKey),
 	_direction(1,0,0),
-    _isAttachedToRenderSystem(false)
+    _isAttachedToRenderSystem(false),
+    _isShadowCasting(false)
 {
 }
 
@@ -79,6 +83,8 @@ void EntityNode::construct()
     static_assert(std::is_base_of_v<sigc::trackable, ModelKey>);
 	observeKey("model", sigc::mem_fun(this, &EntityNode::_modelKeyChanged));
 	observeKey("skin", sigc::mem_fun(_modelKey, &ModelKey::skinChanged));
+
+    observeKey("noshadows", sigc::mem_fun(this, &EntityNode::_onNoShadowsSettingsChanged));
 
 	_shaderParms.addKeyObservers();
 
@@ -113,7 +119,13 @@ void EntityNode::constructClone(const EntityNode& original)
 
 void EntityNode::destruct()
 {
-	_modelKey.setActive(false); // disable callbacks during destruction
+    // Disable model key handling, remove child nodes
+	_modelKey.destroy();
+
+    // Remove any attached entities before this EntityNode is defunct
+    // Particle node attachments might want to remove their renderables from
+    // this entity on destruction.
+    _attachedEnts.clear();
 
 	_eclassChangedConn.disconnect();
 
@@ -230,9 +242,14 @@ void EntityNode::foreachRenderable(const IRenderEntity::ObjectVisitFunction& fun
 }
 
 void EntityNode::foreachRenderableTouchingBounds(const AABB& bounds,
-    const IRenderEntity::ObjectVisitFunction& functor)
+    const ObjectVisitFunction& functor)
 {
     _renderObjects.foreachRenderableTouchingBounds(bounds, functor);
+}
+
+bool EntityNode::isShadowCasting() const
+{
+    return _isShadowCasting;
 }
 
 std::string EntityNode::getFingerprint()
@@ -519,6 +536,16 @@ void EntityNode::_modelKeyChanged(const std::string& value)
 void EntityNode::_originKeyChanged()
 {
     // TODO: add virtual callout for subclasses
+}
+
+void EntityNode::_colourKeyChanged(const std::string& value)
+{
+    onColourKeyChanged(value);
+}
+
+void EntityNode::_onNoShadowsSettingsChanged(const std::string& noShadowsValue)
+{
+    _isShadowCasting = noShadowsValue != "1";
 }
 
 const ShaderPtr& EntityNode::getWireShader() const

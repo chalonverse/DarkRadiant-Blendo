@@ -1,10 +1,11 @@
 #include "GLProgramFactory.h"
 
-#include "glprogram/GLSLDepthFillProgram.h"
-#include "glprogram/GLSLDepthFillAlphaProgram.h"
-#include "glprogram/GLSLCubeMapProgram.h"
-#include "glprogram/GLSLBumpProgram.h"
+#include "glprogram/DepthFillAlphaProgram.h"
+#include "glprogram/CubeMapProgram.h"
+#include "glprogram/InteractionProgram.h"
 #include "glprogram/GenericVFPProgram.h"
+#include "glprogram/ShadowMapProgram.h"
+#include "glprogram/RegularStageProgram.h"
 
 #include "itextstream.h"
 #include "iregistry.h"
@@ -24,9 +25,11 @@ using CharBufPtr = std::shared_ptr<std::vector<char>>;
 // Constructor, populates map with GLProgram instances
 GLProgramFactory::GLProgramFactory()
 {
-    _builtInPrograms[ShaderProgram::DepthFillAlpha] = std::make_shared<GLSLDepthFillAlphaProgram>();
-    _builtInPrograms[ShaderProgram::Interaction] = std::make_shared<GLSLBumpProgram>();
-    _builtInPrograms[ShaderProgram::CubeMap] = std::make_shared<GLSLCubeMapProgram>();
+    _builtInPrograms[ShaderProgram::DepthFillAlpha] = std::make_shared<DepthFillAlphaProgram>();
+    _builtInPrograms[ShaderProgram::Interaction] = std::make_shared<InteractionProgram>();
+    _builtInPrograms[ShaderProgram::CubeMap] = std::make_shared<CubeMapProgram>();
+    _builtInPrograms[ShaderProgram::ShadowMap] = std::make_shared<ShadowMapProgram>();
+    _builtInPrograms[ShaderProgram::RegularStage] = std::make_shared<RegularStageProgram>();
 }
 
 GLProgram* GLProgramFactory::getBuiltInProgram(ShaderProgram builtInProgram)

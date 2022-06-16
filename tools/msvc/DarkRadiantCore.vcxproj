@@ -629,14 +629,16 @@
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\DepthFillPass.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\FullBrightRenderer.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\GLProgramFactory.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\CubeMapProgram.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\DepthFillAlphaProgram.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GenericVFPProgram.cpp" />
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.cpp" />
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLCubeMapProgram.cpp" />
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillAlphaProgram.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLProgramBase.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\InteractionProgram.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\RegularStageProgram.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\ShadowMapProgram.cpp" />
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\InteractingLight.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\InteractionPass.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\LightingModeRenderer.cpp" />
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\LightInteractions.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\ObjectRenderer.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\OpenGLShader.cpp" />
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\OpenGLShaderPass.cpp" />
@@ -996,17 +998,20 @@
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\ColourShader.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\DepthFillPass.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\FenceSyncProvider.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\FrameBuffer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\FullBrightRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\GeometryRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\GLProgramFactory.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\CubeMapProgram.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\DepthFillAlphaProgram.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GenericVFPProgram.h" />
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.h" />
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLCubeMapProgram.h" />
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillAlphaProgram.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLProgramBase.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\InteractionProgram.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\RegularStageProgram.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\ShadowMapProgram.h" />
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\InteractingLight.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\InteractionPass.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\LightingModeRenderer.h" />
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\LightInteractions.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\ObjectRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\OpenGLShader.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\OpenGLShaderPass.h" />
@@ -1016,7 +1021,6 @@
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\SceneRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\SurfaceRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\TextRenderer.h" />
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\WindingRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\debug\SpacePartitionRenderer.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\GLFont.h" />
     <ClInclude Include="..\..\radiantcore\rendersystem\LightingModeRenderResult.h" />
@@ -1141,22 +1145,22 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />

@@ -1,12 +1,11 @@
 #pragma once
 
-#include "GLProgramAttributes.h"
 #include "GLSLProgramBase.h"
 
 namespace render
 {
 
-class GLSLCubeMapProgram :
+class CubeMapProgram :
     public GLSLProgramBase
 {
 private:
@@ -14,7 +13,7 @@ private:
     GLint _locViewOrigin;
 
 public:
-    GLSLCubeMapProgram() :
+    CubeMapProgram() :
         _locViewOrigin(-1)
     {}
 
@@ -23,8 +22,7 @@ public:
     void enable() override;
     void disable() override;
 
-    void applyRenderParams(const Vector3& viewer, const Matrix4& localToWorld,
-                           const Params&) override;
+    void setViewer(const Vector3& viewer);
 };
 
 } // namespace render

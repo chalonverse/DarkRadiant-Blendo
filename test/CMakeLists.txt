@@ -30,6 +30,7 @@ add_executable(drtest
                ModelScale.cpp
                Models.cpp
                Particles.cpp
+               Patch.cpp
                PatchIterators.cpp
                PatchWelding.cpp
                PointTrace.cpp
@@ -38,6 +39,7 @@ add_executable(drtest
                SceneNode.cpp
                SelectionAlgorithm.cpp
                Selection.cpp
+               Settings.cpp
                TextureManipulation.cpp
                TextureTool.cpp
                Transformation.cpp

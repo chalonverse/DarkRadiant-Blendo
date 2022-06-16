@@ -195,6 +195,9 @@ public:
      * The bounds are specified in world coordinates.
      */
     virtual void foreachRenderableTouchingBounds(const AABB& bounds, const ObjectVisitFunction& functor) = 0;
+
+    // Returns true if this entity produces shadows when lit (i.e.returns false when the entity has "noshadows" set to 1)
+    virtual bool isShadowCasting() const = 0;
 };
 typedef std::shared_ptr<IRenderEntity> IRenderEntityPtr;
 typedef std::weak_ptr<IRenderEntity> IRenderEntityWeakPtr;
@@ -259,6 +262,9 @@ public:
      * pyramid (the same as worldOrigin()).
      */
 	virtual Vector3 getLightOrigin() const = 0;
+
+    // Whether this light is allowed to cast shadows
+    virtual bool isShadowCasting() const = 0;
 };
 typedef std::shared_ptr<RendererLight> RendererLightPtr;
 
@@ -498,6 +504,9 @@ enum class BuiltInShaderType
 // connection lines, light volumes in both camera and ortho.
 enum class ColourShaderType
 {
+    // Line shader for camera views only
+    CameraOutline,
+
     // Fill shader, non-transparent
     CameraSolid,
 
@@ -509,6 +518,9 @@ enum class ColourShaderType
 
     // Items drawn in both camera and ortho views
     CameraAndOrthoview,
+
+    // Outline shader visible in camera and ortho views
+    CameraAndOrthoViewOutline,
 };
 
 class IRenderResult
@@ -520,6 +532,8 @@ public:
 
     virtual std::string toString() = 0;
 };
+
+constexpr const char* const RKEY_ENABLE_SHADOW_MAPPING = "user/ui/renderSystem/enableShadowMapping";
 
 /**
  * \brief

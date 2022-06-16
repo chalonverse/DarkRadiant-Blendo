@@ -5,6 +5,7 @@
 #include "irendersystemfactory.h"
 #include "iselectable.h"
 #include "iselection.h"
+#include "ifilesystem.h"
 #include "iundo.h"
 #include "ishaders.h"
 #include "icolourscheme.h"
@@ -29,13 +30,6 @@ using EntityTest = RadiantTest;
 namespace
 {
 
-// Create an entity from a simple classname string
-IEntityNodePtr createByClassName(const std::string& className)
-{
-    auto cls = GlobalEntityClassManager().findClass(className);
-    return GlobalEntityModule().createEntity(cls);
-}
-
 // Container for an entity under test. Stores the entity and adds it to the
 // global map to enable undo.
 struct TestEntity
@@ -47,7 +41,7 @@ struct TestEntity
     static TestEntity create(const std::string& className)
     {
         TestEntity result;
-        result.node = createByClassName(className);
+        result.node = algorithm::createEntityByClassName(className);
         result.spawnArgs = &result.node->getEntity();
 
         // Enable undo
@@ -119,20 +113,20 @@ TEST_F(EntityTest, EntityClassInheritsAttributes)
     ASSERT_TRUE(cls);
 
     // Inherited from 'light'
-    EXPECT_EQ(cls->getAttribute("editor_color").getValue(), "0 1 0");
-    EXPECT_EQ(cls->getAttribute("spawnclass").getValue(), "idLight");
+    EXPECT_EQ(cls->getAttributeValue("editor_color"), "0 1 0");
+    EXPECT_EQ(cls->getAttributeValue("spawnclass"), "idLight");
 
     // Inherited from 'atdm:light_base'
-    EXPECT_EQ(cls->getAttribute("AIUse").getValue(), "AIUSE_LIGHTSOURCE");
-    EXPECT_EQ(cls->getAttribute("shouldBeOn").getValue(), "0");
+    EXPECT_EQ(cls->getAttributeValue("AIUse"), "AIUSE_LIGHTSOURCE");
+    EXPECT_EQ(cls->getAttributeValue("shouldBeOn"), "0");
 
     // Inherited but overridden on 'light_extinguishable' itself
-    EXPECT_EQ(cls->getAttribute("editor_displayFolder").getValue(),
+    EXPECT_EQ(cls->getAttributeValue("editor_displayFolder"),
               "Lights/Base Entities, DoNotUse");
 
     // Lookup without considering inheritance
-    EXPECT_EQ(cls->getAttribute("editor_color", false).getValue(), "");
-    EXPECT_EQ(cls->getAttribute("spawnclass", false).getValue(), "");
+    EXPECT_EQ(cls->getAttributeValue("editor_color", false), "");
+    EXPECT_EQ(cls->getAttributeValue("spawnclass", false), "");
 }
 
 TEST_F(EntityTest, VisitInheritedClassAttributes)
@@ -167,17 +161,17 @@ TEST_F(EntityTest, MultiLineEditorUsage)
     ASSERT_TRUE(eclass);
 
     // Assume we have non-empty editor_usage/1/2 attributes
-    EXPECT_NE(eclass->getAttribute("editor_usage").getValue(), "");
-    EXPECT_NE(eclass->getAttribute("editor_usage1").getValue(), "");
-    EXPECT_NE(eclass->getAttribute("editor_usage2").getValue(), "");
+    EXPECT_NE(eclass->getAttributeValue("editor_usage"), "");
+    EXPECT_NE(eclass->getAttributeValue("editor_usage1"), "");
+    EXPECT_NE(eclass->getAttributeValue("editor_usage2"), "");
 
     auto editor_usage = eclass::getUsage(*eclass);
 
     std::vector<std::string> singleAttributes =
     {
-        eclass->getAttribute("editor_usage").getValue(),
-        eclass->getAttribute("editor_usage1").getValue(),
-        eclass->getAttribute("editor_usage2").getValue()
+        eclass->getAttributeValue("editor_usage"),
+        eclass->getAttributeValue("editor_usage1"),
+        eclass->getAttributeValue("editor_usage2")
     };
 
     EXPECT_EQ(editor_usage, string::join(singleAttributes, "\n"));
@@ -186,22 +180,22 @@ TEST_F(EntityTest, MultiLineEditorUsage)
 void checkBucketEntityDef(const IEntityClassPtr& eclass)
 {
     // These spawnargs are all defined directly on bucket_metal
-    EXPECT_EQ(eclass->getAttribute("editor_usage").getValue(), "So you can kick the bucket.");
-    EXPECT_EQ(eclass->getAttribute("editor_displayFolder").getValue(), "Moveables/Containers");
-    EXPECT_EQ(eclass->getAttribute("mass").getValue(), "8");
-    EXPECT_EQ(eclass->getAttribute("inherit").getValue(), "bucket_base");
-    EXPECT_EQ(eclass->getAttribute("model").getValue(), "models/darkmod/containers/bucket.lwo");
-    EXPECT_EQ(eclass->getAttribute("friction").getValue(), "0.2");
-    EXPECT_EQ(eclass->getAttribute("clipmodel").getValue(), "models/darkmod/misc/clipmodels/bucket_cm.lwo");
-    EXPECT_EQ(eclass->getAttribute("bouncyness").getValue(), "0.5");
-    EXPECT_EQ(eclass->getAttribute("snd_bounce").getValue(), "tdm_impact_metal_bucket");
-    EXPECT_EQ(eclass->getAttribute("snd_bounce_carpet").getValue(), "tdm_impact_metal_bucket_on_soft");
-    EXPECT_EQ(eclass->getAttribute("snd_bounce_cloth").getValue(), "tdm_impact_metal_bucket_on_soft");
-    EXPECT_EQ(eclass->getAttribute("snd_bounce_grass").getValue(), "tdm_impact_metal_bucket_on_soft");
-    EXPECT_EQ(eclass->getAttribute("snd_bounce_dirt").getValue(), "tdm_impact_metal_bucket_on_soft");
+    EXPECT_EQ(eclass->getAttributeValue("editor_usage"), "So you can kick the bucket.");
+    EXPECT_EQ(eclass->getAttributeValue("editor_displayFolder"), "Moveables/Containers");
+    EXPECT_EQ(eclass->getAttributeValue("mass"), "8");
+    EXPECT_EQ(eclass->getAttributeValue("inherit"), "bucket_base");
+    EXPECT_EQ(eclass->getAttributeValue("model"), "models/darkmod/containers/bucket.lwo");
+    EXPECT_EQ(eclass->getAttributeValue("friction"), "0.2");
+    EXPECT_EQ(eclass->getAttributeValue("clipmodel"), "models/darkmod/misc/clipmodels/bucket_cm.lwo");
+    EXPECT_EQ(eclass->getAttributeValue("bouncyness"), "0.5");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce"), "tdm_impact_metal_bucket");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce_carpet"), "tdm_impact_metal_bucket_on_soft");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce_cloth"), "tdm_impact_metal_bucket_on_soft");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce_grass"), "tdm_impact_metal_bucket_on_soft");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce_dirt"), "tdm_impact_metal_bucket_on_soft");
 
     // This is defined in the parent entityDef:
-    EXPECT_EQ(eclass->getAttribute("snd_bounce_snow").getValue(), "tdm_impact_dirt");
+    EXPECT_EQ(eclass->getAttributeValue("snd_bounce_snow"), "tdm_impact_dirt");
 }
 
 // #5652: Reloading DEFs must not mess up the eclass attributes
@@ -212,7 +206,7 @@ TEST_F(EntityTest, ReloadDefsOnUnchangedFiles)
 
     // Check the parent, it defines an editor_usage which will mess up the child (when the #5652 problem was unfixed)
     EXPECT_TRUE(parent != nullptr);
-    EXPECT_EQ(parent->getAttribute("editor_usage").getValue(), "Don't use. Base class for all TDM moveables.");
+    EXPECT_EQ(parent->getAttributeValue("editor_usage"), "Don't use. Base class for all TDM moveables.");
 
     checkBucketEntityDef(eclass);
 
@@ -253,7 +247,7 @@ TEST_F(EntityTest, CreateBasicLightEntity)
 
 TEST_F(EntityTest, EnumerateEntitySpawnargs)
 {
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
     auto& spawnArgs = light->getEntity();
 
     // Visit spawnargs by key and value string
@@ -293,7 +287,7 @@ TEST_F(EntityTest, EnumerateEntitySpawnargs)
 
 TEST_F(EntityTest, EnumerateInheritedSpawnargs)
 {
-    auto light = createByClassName("atdm:light_base");
+    auto light = algorithm::createEntityByClassName("atdm:light_base");
     auto& spawnArgs = light->getEntity();
 
     // Enumerate all keyvalues including the inherited ones
@@ -315,7 +309,7 @@ TEST_F(EntityTest, EnumerateInheritedSpawnargs)
 
 TEST_F(EntityTest, GetKeyValuePairs)
 {
-    auto torch = createByClassName("atdm:torch_brazier");
+    auto torch = algorithm::createEntityByClassName("atdm:torch_brazier");
     auto& spawnArgs = torch->getEntity();
 
     using Pair = Entity::KeyValuePairs::value_type;
@@ -348,7 +342,7 @@ TEST_F(EntityTest, GetKeyValuePairs)
 
 TEST_F(EntityTest, CopySpawnargs)
 {
-    auto light = createByClassName("atdm:light_base");
+    auto light = algorithm::createEntityByClassName("atdm:light_base");
     auto& spawnArgs = light->getEntity();
 
     // Add some custom spawnargs to copy
@@ -419,7 +413,7 @@ TEST_F(EntityTest, UndoRedoSpawnargValueChange)
 
 TEST_F(EntityTest, SelectEntity)
 {
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
 
     // Confirm that setting entity node's selection status propagates to the
     // selection system
@@ -432,7 +426,7 @@ TEST_F(EntityTest, SelectEntity)
 
 TEST_F(EntityTest, DestroySelectedEntity)
 {
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
 
     // Confirm that setting entity node's selection status propagates to the
     // selection system
@@ -446,7 +440,7 @@ TEST_F(EntityTest, DestroySelectedEntity)
 namespace
 {
     // A simple RenderableCollector which just logs/stores whatever is submitted
-    struct TestRenderableCollector : 
+    struct TestRenderableCollector :
         public render::RenderableCollectorBase
     {
         TestRenderableCollector(bool solid) :
@@ -546,7 +540,7 @@ TEST_F(EntityTest, ModifyEntityClass)
 
 TEST_F(EntityTest, LightLocalToWorldFromOrigin)
 {
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
 
     // Initial localToWorld should be identity
     EXPECT_EQ(light->localToWorld(), Matrix4::getIdentity());
@@ -567,7 +561,7 @@ TEST_F(EntityTest, LightLocalToWorldFromOrigin)
 
 TEST_F(EntityTest, LightWireframeShader)
 {
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
 
     // Initially there is no shader because there is no rendersystem
     auto wireSh = light->getWireShader();
@@ -591,11 +585,11 @@ TEST_F(EntityTest, LightWireframeShader)
 
 // Disabled test, since the Shader implementation currently offers no public interface
 // to enumerate or inspect the submitted geometry - needs more thought
-#if 0 
+#if 0
 TEST_F(EntityTest, LightVolumeColorFromColorKey)
 {
     // Create a default light
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
 
     {
         // Render the default light
@@ -629,7 +623,7 @@ TEST_F(EntityTest, LightVolumeColorFromColorKey)
 TEST_F(EntityTest, OverrideLightVolumeColour)
 {
     // Create a light with an arbitrary colour
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
     light->getEntity().setKeyValue("_color", "0.25 0.55 0.9");
 
     // Set the "override light volume colour" key
@@ -671,8 +665,8 @@ TEST_F(EntityTest, OverrideLightVolumeColour)
 
 TEST_F(EntityTest, OverrideEClassColour)
 {
-    auto light = createByClassName("light");
-    auto torch = createByClassName("light_torchflame_small");
+    auto light = algorithm::createEntityByClassName("light");
+    auto torch = algorithm::createEntityByClassName("light_torchflame_small");
     auto lightCls = light->getEntity().getEntityClass();
     auto torchCls = torch->getEntity().getEntityClass();
 
@@ -699,8 +693,8 @@ TEST_F(EntityTest, DefaultEclassColourIsValid)
     auto eclass = GlobalEntityClassManager().findClass("dr:entity_using_modeldef");
 
     EXPECT_FALSE(eclass->getParent()) << "Entity Class is not supposed to have a parent, please adjust the test data";
-    EXPECT_EQ(eclass->getAttribute("editor_color", true).getValue(), "") << "Entity Class shouldn't have an editor_color in this test";
-    
+    EXPECT_EQ(eclass->getAttributeValue("editor_color", true), "") << "Entity Class shouldn't have an editor_color in this test";
+
     EXPECT_EQ(eclass->getColour(), Vector4(0.3, 0.3, 1, 1)) << "The entity class should have the same value as in EntityClass.cpp:DefaultEntityColour";
 }
 
@@ -708,13 +702,13 @@ TEST_F(EntityTest, MissingEclassColourIsValid)
 {
     auto eclass = GlobalEntityClassManager().findOrInsert("___nonexistingeclass___", true);
 
-    EXPECT_EQ(eclass->getAttribute("editor_color", true).getValue(), "") << "Entity Class shouldn't have an editor_color in this test";
+    EXPECT_EQ(eclass->getAttributeValue("editor_color", true), "") << "Entity Class shouldn't have an editor_color in this test";
     EXPECT_EQ(eclass->getColour(), Vector4(0.3, 0.3, 1, 1)) << "The entity class should have the same value as in EntityClass.cpp:DefaultEntityColour";
 }
 
 TEST_F(EntityTest, FuncStaticLocalToWorld)
 {
-    auto funcStatic = createByClassName("func_static");
+    auto funcStatic = algorithm::createEntityByClassName("func_static");
     auto& spawnArgs = funcStatic->getEntity();
     spawnArgs.setKeyValue("origin", "0 0 0");
 
@@ -888,7 +882,7 @@ inline std::set<render::IRenderableObject::Ptr> getAllObjects(IRenderEntityPtr e
 TEST_F(EntityTest, ForeachAttachment)
 {
     // Insert a static entity with an attached light to the scene
-    auto torch = createByClassName("atdm:torch_brazier");
+    auto torch = algorithm::createEntityByClassName("atdm:torch_brazier");
     scene::addNodeToContainer(torch, GlobalMapModule().getRoot());
 
     int attachmentCount = 0;
@@ -906,8 +900,8 @@ TEST_F(EntityTest, LightTransformedByParent)
     // Parent a light to another entity (this isn't currently how the attachment
     // system is implemented, but it should validate that a light node can
     // inherit the transformation of its parent).
-    auto light = createByClassName("light");
-    auto parentModel = createByClassName("func_static");
+    auto light = algorithm::createEntityByClassName("light");
+    auto parentModel = algorithm::createEntityByClassName("func_static");
     scene::addNodeToContainer(light, parentModel);
     scene::addNodeToContainer(parentModel, GlobalMapModule().getRoot());
 
@@ -941,7 +935,7 @@ TEST_F(EntityTest, RenderUnselectedLightEntity)
 {
     RenderFixture fixture;
 
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
     scene::addNodeToContainer(light, GlobalMapModule().getRoot());
 
     // Run the front-end collector through the scene
@@ -955,7 +949,7 @@ TEST_F(EntityTest, RenderSelectedLightEntity)
 {
     RenderFixture fixture;
 
-    auto light = createByClassName("light");
+    auto light = algorithm::createEntityByClassName("light");
     scene::addNodeToContainer(light, GlobalMapModule().getRoot());
 
     // Select the light then render it
@@ -971,7 +965,7 @@ TEST_F(EntityTest, RenderSelectedLightEntity)
 
 TEST_F(EntityTest, RenderLightProperties)
 {
-    auto light = createByClassName("light_torchflame_small");
+    auto light = algorithm::createEntityByClassName("light_torchflame_small");
     scene::addNodeToContainer(light, GlobalMapModule().getRoot());
 
     auto& spawnArgs = light->getEntity();
@@ -1001,7 +995,7 @@ TEST_F(EntityTest, RenderLightProperties)
 
 TEST_F(EntityTest, RenderEmptyFuncStatic)
 {
-    auto funcStatic = createByClassName("func_static");
+    auto funcStatic = algorithm::createEntityByClassName("func_static");
 
     // Func static without a model key is empty
     RenderFixture rf;
@@ -1012,7 +1006,7 @@ TEST_F(EntityTest, RenderEmptyFuncStatic)
 TEST_F(EntityTest, RenderFuncStaticWithModel)
 {
     // Create a func_static with a model key
-    auto funcStatic = createByClassName("func_static");
+    auto funcStatic = algorithm::createEntityByClassName("func_static");
     funcStatic->getEntity().setKeyValue("model", "models/moss_patch.ase");
     scene::addNodeToContainer(funcStatic, GlobalMapModule().getRoot());
 
@@ -1027,11 +1021,11 @@ TEST_F(EntityTest, RenderFuncStaticWithModel)
 
     // Get the first render entity
     auto entity = detail::getFirstRenderEntity([&](IRenderEntityPtr candidate)
-    { 
+    {
         return candidate == funcStatic;
     });
     EXPECT_TRUE(entity);
-    
+
     // Check the renderables attached to this entity
     auto objects = detail::getAllObjects(entity);
     EXPECT_EQ(objects.size(), 1) << "Expected one renderable object attached to the func_static";
@@ -1040,7 +1034,7 @@ TEST_F(EntityTest, RenderFuncStaticWithModel)
 TEST_F(EntityTest, RenderFuncStaticWithMultiSurfaceModel)
 {
     // Create a func_static with a model key
-    auto funcStatic = createByClassName("func_static");
+    auto funcStatic = algorithm::createEntityByClassName("func_static");
     funcStatic->getEntity().setKeyValue("model", "models/torch.lwo");
     scene::addNodeToContainer(funcStatic, GlobalMapModule().getRoot());
 
@@ -1113,7 +1107,7 @@ TEST_F(EntityTest, EntityNodeGenericShaderParms)
 TEST_F(EntityTest, CreateAttachedLightEntity)
 {
     // Create the torch entity which has an attached light
-    auto torch = createByClassName("atdm:torch_brazier");
+    auto torch = algorithm::createEntityByClassName("atdm:torch_brazier");
     ASSERT_TRUE(torch);
 
     // Check that the attachment spawnargs are present
@@ -1159,7 +1153,7 @@ TEST_F(EntityTest, AttachedLightAtCorrectPosition)
     const Vector3 EXPECTED_OFFSET(0, 0, 10); // attach offset in def
 
     // Create a torch node and set a non-zero origin
-    auto torch = createByClassName("atdm:torch_brazier");
+    auto torch = algorithm::createEntityByClassName("atdm:torch_brazier");
     torch->getEntity().setKeyValue("origin", string::to_string(ORIGIN));
     scene::addNodeToContainer(torch, GlobalMapModule().getRoot());
 
@@ -1207,7 +1201,7 @@ TEST_F(EntityTest, AttachedLightMovesWithEntity)
     const Vector3 EXPECTED_OFFSET(0, 0, 10); // attach offset in def
 
     // Create a torch node and set a non-zero origin
-    auto torch = createByClassName("atdm:torch_brazier");
+    auto torch = algorithm::createEntityByClassName("atdm:torch_brazier");
     torch->getEntity().setKeyValue("origin", string::to_string(ORIGIN));
     scene::addNodeToContainer(torch, GlobalMapModule().getRoot());
 
@@ -1237,7 +1231,7 @@ TEST_F(EntityTest, AttachedLightMovesWithEntity)
 
 TEST_F(EntityTest, CreateAIEntity)
 {
-    auto guard = createByClassName("atdm:ai_builder_guard");
+    auto guard = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     ASSERT_TRUE(guard);
 
     // Guard should have a hammer attachment
@@ -1375,7 +1369,7 @@ inline void expectKeyValuesAreEquivalent(const std::vector<std::pair<std::string
 
 TEST_F(EntityTest, EntityObserverAttachDetach)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     TestEntityObserver observer;
@@ -1419,7 +1413,7 @@ TEST_F(EntityTest, EntityObserverAttachDetach)
 
 TEST_F(EntityTest, EntityObserverKeyAddition)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     TestEntityObserver observer;
@@ -1452,7 +1446,7 @@ TEST_F(EntityTest, EntityObserverKeyAddition)
 
 TEST_F(EntityTest, EntityObserverKeyRemoval)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     TestEntityObserver observer;
@@ -1488,7 +1482,7 @@ TEST_F(EntityTest, EntityObserverKeyRemoval)
 
 TEST_F(EntityTest, EntityObserverKeyChange)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     TestEntityObserver observer;
@@ -1696,7 +1690,7 @@ TEST_F(EntityTest, EntityObserverUndoSingleKeyValue)
 
 TEST_F(EntityTest, KeyObserverAttachDetach)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     constexpr const char* NewKeyName = "New_Unique_Key";
@@ -1726,7 +1720,7 @@ TEST_F(EntityTest, KeyObserverAttachDetach)
 
 TEST_F(EntityTest, KeyObserverValueChange)
 {
-    auto guardNode = createByClassName("atdm:ai_builder_guard");
+    auto guardNode = algorithm::createEntityByClassName("atdm:ai_builder_guard");
     auto guard = Node_getEntity(guardNode);
 
     constexpr const char* NewKeyName = "New_Unique_Key";
@@ -1973,7 +1967,9 @@ TEST_F(EntityTest, MovePlayerStart)
 {
     // Empty map, check prerequisites
     auto originalPosition = "50 30 47";
-    auto playerStart = GlobalEntityModule().createEntity(GlobalEntityClassManager().findOrInsert("info_player_start", false));
+    auto playerStart = GlobalEntityModule().createEntity(
+        GlobalEntityClassManager().findOrInsert("info_player_start", false)
+    );
     scene::addNodeToContainer(playerStart, GlobalMapModule().getRoot());
     Node_getEntity(playerStart)->setKeyValue("origin", originalPosition);
 
@@ -1984,6 +1980,43 @@ TEST_F(EntityTest, MovePlayerStart)
     // Ensure this action is undoable
     GlobalUndoSystem().undo();
     EXPECT_EQ(Node_getEntity(playerStart)->getKeyValue("origin"), originalPosition) << "Origin change didn't get undone";
+}
+
+TEST_F(EntityTest, GetEClassVisibility)
+{
+    // Normal entity with NORMAL visibility
+    auto playerStart = GlobalEntityClassManager().findClass("info_player_start");
+    ASSERT_TRUE(playerStart);
+    EXPECT_EQ(playerStart->getVisibility(), vfs::Visibility::NORMAL);
+
+    // Hidden entity
+    auto entityBase = GlobalEntityClassManager().findClass("atdm:entity_base");
+    ASSERT_TRUE(entityBase);
+    EXPECT_EQ(entityBase->getAttributeValue("editor_visibility"), "hidden");
+    EXPECT_EQ(entityBase->getVisibility(), vfs::Visibility::HIDDEN);
+}
+
+TEST_F(EntityTest, EClassVisibilityIsNotInherited)
+{
+    // func_static derives from the hidden atdm:entity_base, but should not in itself be hidden
+    auto funcStatic = GlobalEntityClassManager().findClass("func_static");
+    ASSERT_TRUE(funcStatic);
+    EXPECT_EQ(funcStatic->getVisibility(), vfs::Visibility::NORMAL);
+}
+
+TEST_F(EntityTest, GetAttributeValue)
+{
+    auto eclass = GlobalEntityClassManager().findClass("attribute_type_test");
+
+    // Missing attribute is an empty string
+    EXPECT_EQ(eclass->getAttributeValue("non_existent"), "");
+
+    // Defined on the actual class
+    EXPECT_EQ(eclass->getAttributeValue("ordinary_key"), "Test");
+
+    // Inherited attributes should only appear if the includeInherited bool is set
+    EXPECT_EQ(eclass->getAttributeValue("base_defined_bool", false), "");
+    EXPECT_EQ(eclass->getAttributeValue("base_defined_bool", true), "1");
 }
 
 TEST_F(EntityTest, GetDefaultAttributeType)

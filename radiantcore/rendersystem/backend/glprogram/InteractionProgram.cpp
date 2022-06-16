@@ -1,4 +1,4 @@
-#include "GLSLBumpProgram.h"
+#include "InteractionProgram.h"
 #include "../GLProgramFactory.h"
 
 #include "GLProgramAttributes.h"
@@ -9,6 +9,8 @@
 #include "debugging/gl.h"
 #include "math/Matrix4.h"
 #include "../OpenGLState.h"
+#include "render/Rectangle.h"
+#include "rendersystem/backend/FrameBuffer.h"
 
 namespace render
 {
@@ -25,7 +27,7 @@ namespace
 }
 
 // Main construction
-void GLSLBumpProgram::create()
+void InteractionProgram::create()
 {
 	// Initialise the lightScale value
     auto currentGame = GlobalGameManager().currentGame();
@@ -50,11 +52,13 @@ void GLSLBumpProgram::create()
     debug::assertNoGlErrors();
 
     // Set the uniform locations to the correct bound values
-    _locLightOrigin = glGetUniformLocation(_programObj, "u_light_origin");
-    _locLightColour = glGetUniformLocation(_programObj, "u_light_color");
-    _locViewOrigin = glGetUniformLocation(_programObj, "u_view_origin");
-    _locLightScale = glGetUniformLocation(_programObj, "u_light_scale");
-    _locAmbientLight = glGetUniformLocation(_programObj, "uAmbientLight");
+    _locLocalLightOrigin = glGetUniformLocation(_programObj, "u_LocalLightOrigin");
+    _locWorldLightOrigin = glGetUniformLocation(_programObj, "u_WorldLightOrigin");
+    _locWorldUpLocal = glGetUniformLocation(_programObj, "u_WorldUpLocal");
+    _locLightColour = glGetUniformLocation(_programObj, "u_LightColour");
+    _locViewOrigin = glGetUniformLocation(_programObj, "u_LocalViewOrigin");
+    _locLightScale = glGetUniformLocation(_programObj, "u_LightScale");
+    _locAmbientLight = glGetUniformLocation(_programObj, "u_IsAmbientLight");
     _locColourModulation = glGetUniformLocation(_programObj, "u_ColourModulation");
     _locColourAddition = glGetUniformLocation(_programObj, "u_ColourAddition");
     _locModelViewProjection = glGetUniformLocation(_programObj, "u_ModelViewProjection");
@@ -64,6 +68,9 @@ void GLSLBumpProgram::create()
     _locBumpTextureMatrix = glGetUniformLocation(_programObj, "u_BumpTextureMatrix");
     _locSpecularTextureMatrix = glGetUniformLocation(_programObj, "u_SpecularTextureMatrix");
     _locLightTextureMatrix = glGetUniformLocation(_programObj, "u_LightTextureMatrix");
+
+    _locShadowMapRect = glGetUniformLocation(_programObj, "u_ShadowMapRect");
+    _locUseShadowMap = glGetUniformLocation(_programObj, "u_UseShadowMap");
 
     // Set up the texture uniforms. The renderer uses fixed texture units for
     // particular textures, so make sure they are correct here.
@@ -76,9 +83,7 @@ void GLSLBumpProgram::create()
     glUseProgram(_programObj);
     debug::assertNoGlErrors();
 
-    GLint samplerLoc;
-
-    samplerLoc = glGetUniformLocation(_programObj, "u_Diffusemap");
+    GLint samplerLoc = glGetUniformLocation(_programObj, "u_Diffusemap");
     glUniform1i(samplerLoc, 0);
 
     samplerLoc = glGetUniformLocation(_programObj, "u_Bumpmap");
@@ -93,6 +98,9 @@ void GLSLBumpProgram::create()
     samplerLoc = glGetUniformLocation(_programObj, "u_attenuationmap_z");
     glUniform1i(samplerLoc, 4);
 
+    samplerLoc = glGetUniformLocation(_programObj, "u_ShadowMap");
+    glUniform1i(samplerLoc, 5);
+
     // Light scale is constant at this point
     glUniform1f(_locLightScale, _lightScale);
 
@@ -102,7 +110,7 @@ void GLSLBumpProgram::create()
     debug::assertNoGlErrors();
 }
 
-void GLSLBumpProgram::enable()
+void InteractionProgram::enable()
 {
     GLSLProgramBase::enable();
 
@@ -116,7 +124,7 @@ void GLSLBumpProgram::enable()
     debug::assertNoGlErrors();
 }
 
-void GLSLBumpProgram::disable()
+void InteractionProgram::disable()
 {
     GLSLProgramBase::disable();
 
@@ -134,7 +142,7 @@ void GLSLBumpProgram::disable()
     debug::assertNoGlErrors();
 }
 
-void GLSLBumpProgram::setStageVertexColour(IShaderLayer::VertexColourMode vertexColourMode, const Colour4& stageColour)
+void InteractionProgram::setStageVertexColour(IShaderLayer::VertexColourMode vertexColourMode, const Colour4& stageColour)
 {
     // Define the colour factors to blend into the final fragment
     switch (vertexColourMode)
@@ -163,32 +171,32 @@ void GLSLBumpProgram::setStageVertexColour(IShaderLayer::VertexColourMode vertex
     }
 }
 
-void GLSLBumpProgram::setModelViewProjection(const Matrix4& modelViewProjection)
+void InteractionProgram::setModelViewProjection(const Matrix4& modelViewProjection)
 {
     loadMatrixUniform(_locModelViewProjection, modelViewProjection);
 }
 
-void GLSLBumpProgram::setObjectTransform(const Matrix4& transform)
+void InteractionProgram::setObjectTransform(const Matrix4& transform)
 {
     loadMatrixUniform(_locObjectTransform, transform);
 }
 
-void GLSLBumpProgram::setDiffuseTextureTransform(const Matrix4& transform)
+void InteractionProgram::setDiffuseTextureTransform(const Matrix4& transform)
 {
     loadTextureMatrixUniform(_locDiffuseTextureMatrix, transform);
 }
 
-void GLSLBumpProgram::setBumpTextureTransform(const Matrix4& transform)
+void InteractionProgram::setBumpTextureTransform(const Matrix4& transform)
 {
     loadTextureMatrixUniform(_locBumpTextureMatrix, transform);
 }
 
-void GLSLBumpProgram::setSpecularTextureTransform(const Matrix4& transform)
+void InteractionProgram::setSpecularTextureTransform(const Matrix4& transform)
 {
     loadTextureMatrixUniform(_locSpecularTextureMatrix, transform);
 }
 
-void GLSLBumpProgram::setupLightParameters(OpenGLState& state, const RendererLight& light, std::size_t renderTime)
+void InteractionProgram::setupLightParameters(OpenGLState& state, const RendererLight& light, std::size_t renderTime)
 {
     // Get the light shader and examine its first (and only valid) layer
     const auto & shader = light.getShader();
@@ -221,7 +229,7 @@ void GLSLBumpProgram::setupLightParameters(OpenGLState& state, const RendererLig
     loadMatrixUniform(_locLightTextureMatrix, light.getLightTextureTransformation());
 }
 
-void GLSLBumpProgram::setUpObjectLighting(const Vector3& worldLightOrigin,
+void InteractionProgram::setUpObjectLighting(const Vector3& worldLightOrigin,
     const Vector3& viewer,
     const Matrix4& inverseObjectTransform)
 {
@@ -230,7 +238,11 @@ void GLSLBumpProgram::setUpObjectLighting(const Vector3& worldLightOrigin,
     const auto& worldToObject = inverseObjectTransform;
 
     // Calculate the light origin in object space
-    Vector3 localLight = worldToObject.transformPoint(worldLightOrigin);
+    auto localLightOrigin = worldToObject.transformPoint(worldLightOrigin);
+
+    // Calculate world up (0,0,1) in object space
+    // This is needed for ambient lights
+    auto worldUpLocal = worldToObject.zCol3();
 
     // Calculate viewer location in object space
     auto osViewer = inverseObjectTransform.transformPoint(viewer);
@@ -241,12 +253,41 @@ void GLSLBumpProgram::setUpObjectLighting(const Vector3& worldLightOrigin,
         static_cast<float>(osViewer.y()),
         static_cast<float>(osViewer.z())
     );
-    glUniform3f(_locLightOrigin,
-        static_cast<float>(localLight.x()),
-        static_cast<float>(localLight.y()),
-        static_cast<float>(localLight.z())
+    glUniform3f(_locLocalLightOrigin,
+        static_cast<float>(localLightOrigin.x()),
+        static_cast<float>(localLightOrigin.y()),
+        static_cast<float>(localLightOrigin.z())
+    );
+    glUniform3f(_locWorldLightOrigin,
+        static_cast<float>(worldLightOrigin.x()),
+        static_cast<float>(worldLightOrigin.y()),
+        static_cast<float>(worldLightOrigin.z())
+    );
+    glUniform3f(_locWorldUpLocal,
+        static_cast<float>(worldUpLocal.x()),
+        static_cast<float>(worldUpLocal.y()),
+        static_cast<float>(worldUpLocal.z())
     );
 
+    debug::assertNoGlErrors();
+}
+
+void InteractionProgram::enableShadowMapping(bool enable)
+{
+    glUniform1i(_locUseShadowMap, enable ? 1 : 0);
+    debug::assertNoGlErrors();
+}
+
+void InteractionProgram::setShadowMapRectangle(const Rectangle& rectangle)
+{
+    // Modeled after the TDM code, which is correcting the rectangle to refer to pixel space coordinates
+    // idVec4 v( page.x, page.y, 0, page.width-1 );
+    // v.ToVec2() = (v.ToVec2() * 2 + idVec2(1, 1)) / (2 * 6 * r_shadowMapSize.GetInteger());
+    // v.w /= 6 * r_shadowMapSize.GetFloat();
+    auto position = (Vector2f(rectangle.x, rectangle.y) * 2 + Vector2f(1, 1)) / (2 * FrameBuffer::DefaultShadowMapSize);
+
+    glUniform4f(_locShadowMapRect, position.x(), position.y(), 
+        0, (static_cast<float>(rectangle.width) - 1) / FrameBuffer::DefaultShadowMapSize);
     debug::assertNoGlErrors();
 }
 

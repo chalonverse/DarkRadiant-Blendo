@@ -28,7 +28,11 @@ private:
 
         ~BufferObject()
         {
-            glDeleteBuffers(1, &_buffer);
+            if (_buffer != 0)
+            {
+                glDeleteBuffers(1, &_buffer);
+            }
+            
             _buffer = 0;
         }
 
@@ -44,9 +48,7 @@ private:
 
         void setData(std::size_t offset, const unsigned char* firstElement, std::size_t numBytes) override
         {
-            glBindBuffer(_target, _buffer);
             glBufferSubData(_target, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(numBytes), firstElement);
-            glBindBuffer(_target, 0);
         }
 
         // Re-allocates the memory of this buffer, does not transfer the data 

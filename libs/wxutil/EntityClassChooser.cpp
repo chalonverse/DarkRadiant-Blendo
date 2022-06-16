@@ -95,8 +95,11 @@ public:
     // EntityClassVisitor implementation
     void visit(const IEntityClassPtr& eclass)
     {
-        std::string folderPath = eclass->getAttribute(_folderKey).getValue();
+        // Skip hidden entity classes
+        if (eclass->getVisibility() == vfs::Visibility::HIDDEN)
+            return;
 
+        std::string folderPath = eclass->getAttributeValue(_folderKey);
         if (!folderPath.empty())
         {
             folderPath = "/" + folderPath;
@@ -383,8 +386,8 @@ void EntityClassChooser::updateSelection()
 
             if (eclass)
             {
-                _modelPreview->setModel(eclass->getAttribute("model").getValue());
-                _modelPreview->setSkin(eclass->getAttribute("skin").getValue());
+                _modelPreview->setModel(eclass->getAttributeValue("model"));
+                _modelPreview->setSkin(eclass->getAttributeValue("skin"));
                 defFileName->SetLabel(eclass->getDefFileName());
                 return; // success
             }

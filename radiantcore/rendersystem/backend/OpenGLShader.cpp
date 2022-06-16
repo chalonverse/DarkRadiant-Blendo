@@ -87,12 +87,13 @@ OpenGLShader::OpenGLShader(const std::string& name, OpenGLRenderSystem& renderSy
     _renderSystem(renderSystem),
     _isVisible(true),
     _useCount(0),
-    _geometryRenderer(renderSystem.getGeometryStore()),
-    _surfaceRenderer(renderSystem.getGeometryStore()),
+    _geometryRenderer(renderSystem.getGeometryStore(), renderSystem.getObjectRenderer()),
+    _surfaceRenderer(renderSystem.getGeometryStore(), renderSystem.getObjectRenderer()),
     _enabledViewTypes(0),
     _mergeModeActive(false)
 {
-    _windingRenderer.reset(new WindingRenderer<WindingIndexer_Triangles>(renderSystem.getGeometryStore(), this));
+    _windingRenderer.reset(new WindingRenderer<WindingIndexer_Triangles>(
+        renderSystem.getGeometryStore(), renderSystem.getObjectRenderer(), this));
 }
 
 OpenGLShader::~OpenGLShader()
@@ -138,7 +139,7 @@ void OpenGLShader::drawSurfaces(const VolumeTest& view)
 
     if (hasSurfaces())
     {
-        _geometryRenderer.render();
+        _geometryRenderer.renderAllVisibleGeometry();
 
         // Surfaces are not allowed to render vertex colours (for now)
         // otherwise they don't show up in their parent entity's colour
@@ -173,6 +174,16 @@ IGeometryRenderer::Slot OpenGLShader::addGeometry(GeometryType indexType,
     return _geometryRenderer.addGeometry(indexType, vertices, indices);
 }
 
+void OpenGLShader::activateGeometry(IGeometryRenderer::Slot slot)
+{
+    _geometryRenderer.activateGeometry(slot);
+}
+
+void OpenGLShader::deactivateGeometry(IGeometryRenderer::Slot slot)
+{
+    _geometryRenderer.deactivateGeometry(slot);
+}
+
 void OpenGLShader::removeGeometry(IGeometryRenderer::Slot slot)
 {
     _geometryRenderer.removeGeometry(slot);
@@ -182,6 +193,11 @@ void OpenGLShader::updateGeometry(IGeometryRenderer::Slot slot, const std::vecto
     const std::vector<unsigned int>& indices)
 {
     _geometryRenderer.updateGeometry(slot, vertices, indices);
+}
+
+void OpenGLShader::renderAllVisibleGeometry()
+{
+    _geometryRenderer.renderAllVisibleGeometry();
 }
 
 void OpenGLShader::renderGeometry(IGeometryRenderer::Slot slot)
@@ -748,7 +764,9 @@ void OpenGLShader::appendBlendLayer(const IShaderLayer::Ptr& layer)
     }
     else
     {
+        state.glProgram = _renderSystem.getGLProgramFactory().getBuiltInProgram(ShaderProgram::RegularStage);
         state.setRenderFlag(RENDER_TEXTURE_2D);
+        state.setRenderFlag(RENDER_PROGRAM);
     }
 
     // Colour modulation
@@ -764,8 +782,18 @@ void OpenGLShader::appendBlendLayer(const IShaderLayer::Ptr& layer)
         state.setSortPosition(OpenGLState::SORT_FULLBRIGHT);
 	}
 
-    // Polygon offset
-    state.polygonOffset = _material->getPolygonOffset();
+    // Polygon offset: use the one defined on the material if it has one,
+    // otherwise use a sensible default to avoid z-fighting with the depth layer
+    if (_material->getMaterialFlags() & Material::FLAG_POLYGONOFFSET)
+    {
+        state.polygonOffset = _material->getPolygonOffset();
+    }
+    else if (!(state.getRenderFlags() & RENDER_DEPTHWRITE))
+    {
+        // #5938: Blending stages seem to z-fight with the result of the depth-buffer
+        // apply a slight polygon offset to stop that
+        state.polygonOffset = 0.1f;
+    }
 
 #if 0
     if (!layer->getVertexProgram().empty() || !layer->getFragmentProgram().empty())
@@ -786,12 +814,6 @@ void OpenGLShader::appendBlendLayer(const IShaderLayer::Ptr& layer)
         }
     }
 #endif
-}
-
-// Construct a normal shader
-void OpenGLShader::constructNormalShader()
-{
-    constructFromMaterial(GlobalMaterialManager().getMaterial(_name));
 }
 
 void OpenGLShader::constructFromMaterial(const MaterialPtr& material)
@@ -835,7 +857,7 @@ void OpenGLShader::construct()
     }
 
     // Construct the shader from the material definition
-    constructNormalShader();
+    constructFromMaterial(GlobalMaterialManager().getMaterial(_name));
     enableViewType(RenderViewType::Camera);
 }
 

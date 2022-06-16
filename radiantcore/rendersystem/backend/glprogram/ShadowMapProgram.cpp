@@ -1,4 +1,4 @@
-#include "GLSLDepthFillAlphaProgram.h"
+#include "ShadowMapProgram.h"
 
 #include "GLProgramAttributes.h"
 #include "../GLProgramFactory.h"
@@ -11,17 +11,17 @@ namespace render
 
 namespace
 {
-    const char* DEPTHFILL_ALPHA_VP_FILENAME = "zfill_vp.glsl"; // use the same VP
-    const char* DEPTHFILL_ALPHA_FP_FILENAME = "zfill_alpha_fp.glsl";
+    constexpr const char* const SHADOWMAP_VP_FILENAME = "shadowmap_vp.glsl";
+    constexpr const char* const SHADOWMAP_FP_FILENAME = "shadowmap_fp.glsl";
 }
 
-void GLSLDepthFillAlphaProgram::create()
+void ShadowMapProgram::create()
 {
     // Create the program object
-    rMessage() << "[renderer] Creating GLSL depthfill+alpha program" << std::endl;
+    rMessage() << "[renderer] Creating GLSL shadowmap program" << std::endl;
 
     _programObj = GLProgramFactory::createGLSLProgram(
-        DEPTHFILL_ALPHA_VP_FILENAME, DEPTHFILL_ALPHA_FP_FILENAME
+        SHADOWMAP_VP_FILENAME, SHADOWMAP_FP_FILENAME
     );
 
     glBindAttribLocation(_programObj, GLProgramAttribute::Position, "attr_Position");
@@ -32,8 +32,8 @@ void GLSLDepthFillAlphaProgram::create()
     debug::assertNoGlErrors();
 
     _locAlphaTest = glGetUniformLocation(_programObj, "u_AlphaTest");
+    _locLightOrigin = glGetUniformLocation(_programObj, "u_LightOrigin");
     _locObjectTransform = glGetUniformLocation(_programObj, "u_ObjectTransform");
-    _locModelViewProjection = glGetUniformLocation(_programObj, "u_ModelViewProjection");
     _locDiffuseTextureMatrix = glGetUniformLocation(_programObj, "u_DiffuseTextureMatrix");
 
     glUseProgram(_programObj);
@@ -45,7 +45,7 @@ void GLSLDepthFillAlphaProgram::create()
     debug::assertNoGlErrors();
 }
 
-void GLSLDepthFillAlphaProgram::enable()
+void ShadowMapProgram::enable()
 {
     GLSLProgramBase::enable();
 
@@ -53,7 +53,7 @@ void GLSLDepthFillAlphaProgram::enable()
     glEnableVertexAttribArray(GLProgramAttribute::TexCoord);
 }
 
-void GLSLDepthFillAlphaProgram::disable()
+void ShadowMapProgram::disable()
 {
     GLSLProgramBase::disable();
 
@@ -61,22 +61,29 @@ void GLSLDepthFillAlphaProgram::disable()
     glDisableVertexAttribArray(GLProgramAttribute::TexCoord);
 }
 
-void GLSLDepthFillAlphaProgram::setAlphaTest(float alphaTest)
+void ShadowMapProgram::setAlphaTest(float alphaTest)
 {
     glUniform1f(_locAlphaTest, alphaTest);
+
+    debug::assertNoGlErrors();
 }
 
-void GLSLDepthFillAlphaProgram::setModelViewProjection(const Matrix4& modelViewProjection)
+void ShadowMapProgram::setLightOrigin(const Vector3& lightOrigin)
 {
-    loadMatrixUniform(_locModelViewProjection, modelViewProjection);
+    glUniform3f(_locLightOrigin,
+        static_cast<GLfloat>(lightOrigin.x()), 
+        static_cast<GLfloat>(lightOrigin.y()), 
+        static_cast<GLfloat>(lightOrigin.z()));
+
+    debug::assertNoGlErrors();
 }
 
-void GLSLDepthFillAlphaProgram::setObjectTransform(const Matrix4& transform)
+void ShadowMapProgram::setObjectTransform(const Matrix4& transform)
 {
     loadMatrixUniform(_locObjectTransform, transform);
 }
 
-void GLSLDepthFillAlphaProgram::setDiffuseTextureTransform(const Matrix4& transform)
+void ShadowMapProgram::setDiffuseTextureTransform(const Matrix4& transform)
 {
     loadTextureMatrixUniform(_locDiffuseTextureMatrix, transform);
 }

@@ -11,7 +11,7 @@
 #include "debugging/render.h"
 #include "debugging/gl.h"
 
-#include "glprogram/GLSLDepthFillAlphaProgram.h"
+#include "glprogram/DepthFillAlphaProgram.h"
 
 namespace render
 {
@@ -116,14 +116,6 @@ bool OpenGLShaderPass::stateIsActive()
             (_glState.stage1 == NULL || _glState.stage1->isVisible()) &&
             (_glState.stage2 == NULL || _glState.stage2->isVisible()) &&
             (_glState.stage3 == NULL || _glState.stage3->isVisible()));
-}
-
-void OpenGLShaderPass::SetUpNonInteractionProgram(OpenGLState& current, const Vector3& viewer, const Matrix4& objTransform)
-{
-    static GLProgram::Params parms({ 0, 0, 0 }, Matrix4::getIdentity());
-
-    assert(current.glProgram);
-    current.glProgram->applyRenderParams(viewer, objTransform, parms);
 }
 
 void OpenGLShaderPass::drawRenderables(OpenGLState& current)

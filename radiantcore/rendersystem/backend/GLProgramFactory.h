@@ -14,10 +14,11 @@ typedef std::shared_ptr<GLProgram> GLProgramPtr;
 
 enum class ShaderProgram
 {
-    DepthFill,
     DepthFillAlpha,
     Interaction,
     CubeMap,
+    ShadowMap,
+    RegularStage,
 };
 
 /**

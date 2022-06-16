@@ -388,9 +388,6 @@
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GenericVFPProgram.cpp">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.cpp">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\radiantcore\rendersystem\debug\SpacePartitionRenderer.cpp">
       <Filter>src\rendersystem\debug</Filter>
     </ClCompile>
@@ -1036,9 +1033,6 @@
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLProgramBase.cpp">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillAlphaProgram.cpp">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\DepthFillPass.cpp">
       <Filter>src\rendersystem\backend</Filter>
     </ClCompile>
@@ -1117,12 +1111,6 @@
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\ColourShader.cpp">
       <Filter>src\rendersystem\backend</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\LightInteractions.cpp">
-      <Filter>src\rendersystem\backend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLCubeMapProgram.cpp">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\radiantcore\rendersystem\backend\InteractionPass.cpp">
       <Filter>src\rendersystem\backend</Filter>
     </ClCompile>
@@ -1143,6 +1131,24 @@
     </ClCompile>
     <ClCompile Include="..\..\radiantcore\eclass\EClassParser.cpp">
       <Filter>src\eclass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\ShadowMapProgram.cpp">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\InteractionProgram.cpp">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\CubeMapProgram.cpp">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\DepthFillAlphaProgram.cpp">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\InteractingLight.cpp">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\radiantcore\rendersystem\backend\glprogram\RegularStageProgram.cpp">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1420,9 +1426,6 @@
       <Filter>src\rendersystem\backend</Filter>
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GenericVFPProgram.h">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLBumpProgram.h">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\debug\SpacePartitionRenderer.h">
@@ -2190,9 +2193,6 @@
     <ClInclude Include="..\..\radiantcore\model\import\AseModel.h">
       <Filter>src\model\import</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLDepthFillAlphaProgram.h">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLProgramBase.h">
       <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
@@ -2313,14 +2313,8 @@
     <ClInclude Include="..\..\radiantcore\rendersystem\LightingModeRenderResult.h">
       <Filter>src\rendersystem</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\LightInteractions.h">
-      <Filter>src\rendersystem\backend</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\radiantcore\entity\RenderableObjectCollection.h">
       <Filter>src\entity</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\GLSLCubeMapProgram.h">
-      <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\InteractionPass.h">
       <Filter>src\rendersystem\backend</Filter>
@@ -2346,9 +2340,6 @@
     <ClInclude Include="..\..\radiantcore\skins\SkinDeclParser.h">
       <Filter>src\skins</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\radiantcore\rendersystem\backend\WindingRenderer.h">
-      <Filter>src\rendersystem\backend</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\FenceSyncProvider.h">
       <Filter>src\rendersystem\backend</Filter>
     </ClInclude>
@@ -2357,6 +2348,27 @@
     </ClInclude>
     <ClInclude Include="..\..\radiantcore\rendersystem\backend\OpenGLState.h">
       <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\FrameBuffer.h">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\ShadowMapProgram.h">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\InteractionProgram.h">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\CubeMapProgram.h">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\DepthFillAlphaProgram.h">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\InteractingLight.h">
+      <Filter>src\rendersystem\backend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\radiantcore\rendersystem\backend\glprogram\RegularStageProgram.h">
+      <Filter>src\rendersystem\backend\glprogram</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
