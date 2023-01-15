@@ -274,7 +274,8 @@ TreeModel::Row TreeModel::GetRootItem()
 
 void TreeModel::Clear()
 {
-#if wxCHECK_VERSION(3, 0, 5)
+    // This workaround seems to cause crashes in wxGTK 3.2.0, take it out (#6105)
+#if wxCHECK_VERSION(3, 0, 5) && !wxCHECK_VERSION(3, 2, 0)
 	// To work around a problem in wxGTK 3.0.5+, trigger 
 	// an ItemRemoved call for all top-level children before 
 	// actually deleting them.
@@ -350,12 +351,12 @@ void TreeModel::ForeachNodeRecursiveReverse(const TreeModel::NodePtr& node, cons
 
 void TreeModel::SortModel(const TreeModel::SortFunction& sortFunction)
 {
-	SortModelRecursive(_rootNode, sortFunction);
+	SortModelRecursively(_rootNode.get(), sortFunction);
 }
 
 void TreeModel::SortModelByColumn(const TreeModel::Column& column)
 {
-	SortModelRecursive(_rootNode, [&] (const wxDataViewItem& a, const wxDataViewItem& b)->bool
+	SortModelRecursively(_rootNode.get(), [&](const wxDataViewItem& a, const wxDataViewItem& b)->bool
 	{
 		Row rowA(a, *this);
 		Row rowB(b, *this);
@@ -393,23 +394,31 @@ void TreeModel::SortModelByColumn(const TreeModel::Column& column)
 	});
 }
 
-void TreeModel::SortModelFoldersFirst(const TreeModel::Column& stringColumn, 
-									  const TreeModel::Column& isFolderColumn)
+void TreeModel::SortModelFoldersFirst(const Column& stringColumn, const Column& isFolderColumn)
 {
-	SortModelRecursive(_rootNode, std::bind(&TreeModel::CompareFoldersFirst, 
-			this, 
-            std::placeholders::_1, 
-            std::placeholders::_2, 
-            stringColumn, 
-            stringColumn.type == Column::String ? CompareStringVariants : CompareIconTextVariants, 
-            isFolderColumn,
-            FolderCompareFunction())); // custom folder comparer is empty
+    // Pass an empty item to start at the root element
+    SortModelFoldersFirst(wxDataViewItem(), stringColumn, isFolderColumn);
+}
+
+void TreeModel::SortModelFoldersFirst(const wxDataViewItem& startItem, const Column& stringColumn, const Column& isFolderColumn)
+{
+    // Pass an empty custom folder comparer
+    SortModelFoldersFirst(startItem, stringColumn, isFolderColumn, FolderCompareFunction());
 }
 
 void TreeModel::SortModelFoldersFirst(const Column& stringColumn, const Column& isFolderColumn,
     const FolderCompareFunction& customFolderSortFunc)
 {
-    SortModelRecursive(_rootNode, std::bind(&TreeModel::CompareFoldersFirst,
+    // Pass an empty item to start at the root element
+    SortModelFoldersFirst(wxDataViewItem(), stringColumn, isFolderColumn, customFolderSortFunc);
+}
+
+void TreeModel::SortModelFoldersFirst(const wxDataViewItem& startItem, const Column& stringColumn,
+    const Column& isFolderColumn, const FolderCompareFunction& customFolderSortFunc)
+{
+    auto startNode = !startItem.IsOk() ? _rootNode.get() : static_cast<Node*>(startItem.GetID());
+
+    SortModelRecursively(startNode, std::bind(&TreeModel::CompareFoldersFirst,
         this,
         std::placeholders::_1,
         std::placeholders::_2,
@@ -419,18 +428,18 @@ void TreeModel::SortModelFoldersFirst(const Column& stringColumn, const Column& 
         customFolderSortFunc));
 }
 
-void TreeModel::SortModelRecursive(const TreeModel::NodePtr& node, const TreeModel::SortFunction& sortFunction)
+void TreeModel::SortModelRecursively(Node* node, const TreeModel::SortFunction& sortFunction)
 {
 	// Use std::sort algorithm and small lambda to only pass wxDataViewItems to the client sort function
 	std::sort(node->children.begin(), node->children.end(), [&] (const NodePtr& a, const NodePtr& b)->bool
 	{
-		return sortFunction(a->item, b->item);
+        return sortFunction(a->item, b->item);
 	});
 
 	// Enter recursion
 	std::for_each(node->children.begin(), node->children.end(), [&] (const NodePtr& child)
 	{
-		SortModelRecursive(child, sortFunction);
+        SortModelRecursively(child.get(), sortFunction);
 	});
 }
 
@@ -482,6 +491,22 @@ wxDataViewItem TreeModel::FindInteger(long needle, const Column& column, const w
 		return static_cast<int>(node.values.size()) > colIndex && 
 			static_cast<long>(node.values[colIndex]) == needle;
 	});
+}
+
+wxDataViewItem TreeModel::FindItem(const std::function<bool(const TreeModel::Row&)>& predicate)
+{
+    return FindItem(predicate, wxDataViewItem());
+}
+
+wxDataViewItem TreeModel::FindItem(const std::function<bool(const TreeModel::Row&)>& predicate, const wxDataViewItem& startItem)
+{
+    auto* startNode = !startItem.IsOk() ? _rootNode.get() : static_cast<Node*>(startItem.GetID());
+
+    return FindRecursive(*startNode, [&](const Node& node)->bool
+    {
+        Row row(node.item, *this);
+        return predicate(row);
+    });
 }
 
 wxDataViewItem TreeModel::FindRecursive(const TreeModel::Node& node, const std::function<bool (const TreeModel::Node&)>& predicate)
@@ -674,6 +699,11 @@ bool TreeModel::IsContainer(const wxDataViewItem& item) const
 
 	return owningNode != NULL && !owningNode->children.empty();
 #endif
+}
+
+bool TreeModel::HasContainerColumns(const wxDataViewItem&) const
+{
+    return !_isListModel; // we want all columns to show even if the item has children
 }
 
 unsigned int TreeModel::GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
@@ -1010,6 +1040,18 @@ void TreeModel::SetEnabled(const wxDataViewItem& item, unsigned int col, bool en
 	}
 
 	owningNode->enabledFlags[col] = enabled;
+}
+
+void TreeModel::SendSubtreeRefreshEvents(wxDataViewItem& parentItem)
+{
+    wxDataViewItemArray children;
+    GetChildren(parentItem, children);
+
+    for (auto child : children)
+    {
+        ItemDeleted(parentItem, child);
+        ItemAdded(parentItem, child);
+    }
 }
 
 } // namespace
