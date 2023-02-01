@@ -57,9 +57,6 @@ class GenericEntityNode final : public EntityNode, public Snappable
 	// FALSE if the arrow is caught in the xy plane
 	bool _allow3Drotations;
 
-    // Used to determine forward direction if _allow3Drotations is true
-    Vector3 _3DrotationForward;
-
 public:
 	GenericEntityNode(const IEntityClassPtr& eclass);
 

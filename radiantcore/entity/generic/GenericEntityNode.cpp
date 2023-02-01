@@ -15,8 +15,7 @@ GenericEntityNode::GenericEntityNode(const IEntityClassPtr& eclass) :
 	m_rotationKey(std::bind(&GenericEntityNode::rotationChanged, this)),
     _renderableArrow(*this),
     _renderableBox(*this, localAABB(), m_origin),
-    _allow3Drotations(_spawnArgs.getKeyValue("editor_rotatable") == "1"),
-	_3DrotationForward(g_vector3_axis_z)
+	_allow3Drotations(_spawnArgs.getKeyValue("editor_rotatable") == "1")
 {}
 
 GenericEntityNode::GenericEntityNode(const GenericEntityNode& other) :
@@ -29,8 +28,7 @@ GenericEntityNode::GenericEntityNode(const GenericEntityNode& other) :
 	m_rotationKey(std::bind(&GenericEntityNode::rotationChanged, this)),
     _renderableArrow(*this),
     _renderableBox(*this, localAABB(), m_origin),
-	_allow3Drotations(_spawnArgs.getKeyValue("editor_rotatable") == "1"),
-	_3DrotationForward(g_vector3_axis_z)
+	_allow3Drotations(_spawnArgs.getKeyValue("editor_rotatable") == "1")
 {}
 
 std::shared_ptr<GenericEntityNode> GenericEntityNode::Create(const IEntityClassPtr& eclass)
@@ -44,21 +42,6 @@ std::shared_ptr<GenericEntityNode> GenericEntityNode::Create(const IEntityClassP
 void GenericEntityNode::construct()
 {
 	EntityNode::construct();
-
-	// Figure out the forward direction for _allow3Drotations (defaults to Z if not set)
-	std::string rotation_forward = _spawnArgs.getKeyValue("editor_rotatable_forward");
-	if (rotation_forward == "x" || rotation_forward == "X")
-	{
-		_3DrotationForward = g_vector3_axis_x;
-	}
-	else if (rotation_forward == "y" || rotation_forward == "Y")
-	{
-		_3DrotationForward = g_vector3_axis_y;
-	}
-	else if (rotation_forward == "z" || rotation_forward == "Z")
-	{
-		_3DrotationForward = g_vector3_axis_z;
-	}
 
 	m_aabb_local = _spawnArgs.getEntityClass()->getBounds();
 	m_ray.origin = m_aabb_local.getOrigin();
@@ -196,7 +179,8 @@ void GenericEntityNode::updateTransform()
 
 	if (_allow3Drotations)
 	{
-		m_ray.direction = m_rotation.getMatrix4().transformDirection(_3DrotationForward);
+		// greebo: Use the z-direction as base for rotations
+		m_ray.direction = m_rotation.getMatrix4().transformDirection(Vector3(0,0,1));
 	}
 	else
 	{
