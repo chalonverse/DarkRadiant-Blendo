@@ -83,7 +83,7 @@ ModelSelector::ModelSelector() :
     findNamedObject<wxButton>(this, "ModelSelectorOkButton")->Bind(wxEVT_BUTTON, &ModelSelector::onOK, this);
     findNamedObject<wxButton>(this, "ModelSelectorCancelButton")->Bind(wxEVT_BUTTON, &ModelSelector::onCancel, this);
 	findNamedObject<wxButton>(this, "ModelSelectorReloadModelsButton")->Bind(wxEVT_BUTTON, &ModelSelector::onReloadModels, this);
-	findNamedObject<wxButton>(this, "ModelSelectorReloadSkinsButton")->Bind(wxEVT_BUTTON, &ModelSelector::onReloadSkins, this);
+	findNamedObject<wxButton>(this, "ModelSelectorReloadDeclsButton")->Bind(wxEVT_BUTTON, &ModelSelector::onReloadSkins, this);
 	findNamedObject<wxButton>(this, "ModelSelectorRescanFoldersButton")->Bind(wxEVT_BUTTON, &ModelSelector::onRescanFolders, this);
 
 	Bind(wxEVT_CLOSE_WINDOW, &ModelSelector::_onDeleteEvent, this);
@@ -126,7 +126,7 @@ void ModelSelector::setupAdvancedPanel(wxWindow* parent)
 
 	// Refresh preview when material visibility changed
     _materialsList->signal_visibilityChanged().connect(
-		sigc::mem_fun(*_modelPreview, &wxutil::ModelPreview::queueDraw)
+		sigc::mem_fun(*this, &ModelSelector::onMaterialVisibilityStatusChanged)
     );
 
     auto entityPage = findNamedPanel(parent, "ModelRelatedEntitiesPanel");
@@ -171,6 +171,17 @@ void ModelSelector::onShowClassDefinition()
 
     view->ShowModal();
     view->Destroy();
+}
+
+void ModelSelector::onMaterialVisibilityStatusChanged()
+{
+    // Tell the model to refresh its surfaces
+    if (_modelPreview->getModelNode())
+    {
+        _modelPreview->getModelNode()->onFiltersChanged();
+    }
+
+    _modelPreview->queueDraw();
 }
 
 void ModelSelector::onRelatedEntitySelectionChange(wxDataViewEvent& ev)
@@ -261,7 +272,7 @@ void ModelSelector::onMainFrameShuttingDown()
 void ModelSelector::onTreeViewPopulationFinished(wxutil::ResourceTreeView::PopulationFinishedEvent& ev)
 {
 	findNamedObject<wxButton>(this, "ModelSelectorReloadModelsButton")->Enable(true);
-	findNamedObject<wxButton>(this, "ModelSelectorReloadSkinsButton")->Enable(true);
+	findNamedObject<wxButton>(this, "ModelSelectorReloadDeclsButton")->Enable(true);
 	findNamedObject<wxButton>(this, "ModelSelectorRescanFoldersButton")->Enable(true);
 
     // The modelDefs folder should start in collapsed state
@@ -301,7 +312,7 @@ ModelSelector::Result ModelSelector::showAndBlock(const std::string& curModel,
 
     // Ensure the model selector is parented to the main frame,
     // it might have been constructed at a time when this was still null
-    Reparent(GlobalMainFrame().getWxTopLevelWindow());
+    wxASSERT(GetParent() == GlobalMainFrame().getWxTopLevelWindow());
 
     // show and enter recursive main loop.
     int returnCode = ShowModal();
@@ -497,7 +508,7 @@ void ModelSelector::onCancel(wxCommandEvent& ev)
 void ModelSelector::onReloadModels(wxCommandEvent& ev)
 {
 	findNamedObject<wxButton>(this, "ModelSelectorReloadModelsButton")->Enable(false);
-	findNamedObject<wxButton>(this, "ModelSelectorReloadSkinsButton")->Enable(false);
+	findNamedObject<wxButton>(this, "ModelSelectorReloadDeclsButton")->Enable(false);
 	findNamedObject<wxButton>(this, "ModelSelectorRescanFoldersButton")->Enable(false);
 
 	// This will fire the models reloaded signal after some time
@@ -507,17 +518,17 @@ void ModelSelector::onReloadModels(wxCommandEvent& ev)
 void ModelSelector::onReloadSkins(wxCommandEvent& ev)
 {
 	findNamedObject<wxButton>(this, "ModelSelectorReloadModelsButton")->Enable(false);
-	findNamedObject<wxButton>(this, "ModelSelectorReloadSkinsButton")->Enable(false);
+	findNamedObject<wxButton>(this, "ModelSelectorReloadDeclsButton")->Enable(false);
     findNamedObject<wxButton>(this, "ModelSelectorRescanFoldersButton")->Enable(false);
 
 	// When this is done, the skins reloaded signal is fired
-	GlobalModelSkinCache().refresh();
+	GlobalDeclarationManager().reloadDeclarations();
 }
 
 void ModelSelector::onRescanFolders(wxCommandEvent& ev)
 {
     findNamedObject<wxButton>(this, "ModelSelectorReloadModelsButton")->Enable(false);
-    findNamedObject<wxButton>(this, "ModelSelectorReloadSkinsButton")->Enable(false);
+    findNamedObject<wxButton>(this, "ModelSelectorReloadDeclsButton")->Enable(false);
     findNamedObject<wxButton>(this, "ModelSelectorRescanFoldersButton")->Enable(false);
 
     // This will fire the onTreeViewPopulationFinished event when done

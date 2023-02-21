@@ -5,7 +5,6 @@
 
 #include "ishaders.h"
 #include "parser/DefTokeniser.h"
-#include "math/Vector4.h"
 #include "decl/EditableDeclaration.h"
 
 #include <memory>
@@ -111,6 +110,10 @@ public:
     // The three ambient rim colour expressions (empty if not defined)
     IShaderExpression::Ptr _ambientRimColour[3];
 
+    Material::FrobStageType _frobStageType;
+    MapExpressionPtr _frobStageMapExpression;
+    Vector3 _frobStageRgbParameter[2];
+
     // Private copy ctor, used for cloning
     ShaderTemplate(const ShaderTemplate& other);
 
@@ -139,7 +142,8 @@ public:
         _sortReq(SORT_UNDEFINED),	// will be set to default values after the shader has been parsed
         _polygonOffset(0.0f),
         _coverage(Material::MC_UNDETERMINED),
-        _parseFlags(0)
+        _parseFlags(0),
+        _frobStageType(Material::FrobStageType::Default)
 	{
         clear();
 	}
@@ -498,6 +502,29 @@ public:
         onTemplateChanged();
     }
 
+    Material::FrobStageType getFrobStageType()
+	{
+        ensureParsed();
+        return _frobStageType;
+	}
+
+    IMapExpression::Ptr getFrobStageMapExpression()
+	{
+        ensureParsed();
+        return _frobStageMapExpression;
+	}
+
+    Vector3 getFrobStageRgbParameter(std::size_t index)
+	{
+        ensureParsed();
+        return index < 2 ? _frobStageRgbParameter[index] : Vector3(0,0,0);
+	}
+
+    void setFrobStageType(Material::FrobStageType type);
+    void setFrobStageMapExpressionFromString(const std::string& expr);
+    void setFrobStageParameter(std::size_t index, double value);
+    void setFrobStageRgbParameter(std::size_t index, const Vector3& value);
+
     std::size_t addLayer(IShaderLayer::Type type);
     void removeLayer(std::size_t index);
     void swapLayerPosition(std::size_t first, std::size_t second);
@@ -584,6 +611,10 @@ private:
 	bool parseSurfaceFlags(parser::DefTokeniser&, const std::string&);
 	bool parseMaterialType(parser::DefTokeniser&, const std::string&);
 	bool parseCondition(parser::DefTokeniser&, const std::string&);
+	bool parseFrobstageKeywords(parser::DefTokeniser&, const std::string&);
+
+    // Parses a vector3 "(x y z)" into Vector3(x,y,z) or a single float "x" into a Vector3(x,x,x)
+	Vector3 parseScalarOrVector3(parser::DefTokeniser&);
 	IShaderExpression::Ptr parseSingleExpressionTerm(parser::DefTokeniser& tokeniser);
 	void parseRenderMapSize(parser::DefTokeniser&, bool optional);
 

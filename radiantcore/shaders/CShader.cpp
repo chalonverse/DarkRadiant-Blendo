@@ -191,6 +191,45 @@ void CShader::setDescription(const std::string& description)
     _template->setDescription(description);
 }
 
+Material::FrobStageType CShader::getFrobStageType()
+{
+    return _template->getFrobStageType();
+}
+
+void CShader::setFrobStageType(Material::FrobStageType type)
+{
+    ensureTemplateCopy();
+    _template->setFrobStageType(type);
+}
+
+IMapExpression::Ptr CShader::getFrobStageMapExpression()
+{
+    return _template->getFrobStageMapExpression();
+}
+
+void CShader::setFrobStageMapExpressionFromString(const std::string& expr)
+{
+    ensureTemplateCopy();
+    _template->setFrobStageMapExpressionFromString(expr);
+}
+
+Vector3 CShader::getFrobStageRgbParameter(std::size_t index)
+{
+    return _template->getFrobStageRgbParameter(index);
+}
+
+void CShader::setFrobStageParameter(std::size_t index, double value)
+{
+    ensureTemplateCopy();
+    _template->setFrobStageParameter(index, value);
+}
+
+void CShader::setFrobStageRgbParameter(std::size_t index, const Vector3& value)
+{
+    ensureTemplateCopy();
+    _template->setFrobStageRgbParameter(index, value);
+}
+
 bool CShader::IsInUse() const {
 	return m_bInUse;
 }
@@ -601,12 +640,12 @@ void CShader::subscribeToTemplateChanges()
     // Disconnect from any signal first
     _templateChanged.disconnect();
 
-    _templateChanged = _template->sig_TemplateChanged().connect([this]()
+    _templateChanged = _template->sig_TemplateChanged().connect([this]
     {
-        _sigMaterialModified.emit();
-
-        // Check if the editor image needs an update
+        // Check if the editor image needs an update, do this before firing the handler
         updateEditorImage();
+
+        _sigMaterialModified.emit();
     });
 }
 

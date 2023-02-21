@@ -52,9 +52,15 @@ ShaderTemplate::ShaderTemplate(const ShaderTemplate& other) :
     _renderBumpArguments(other._renderBumpArguments),
     _renderBumpFlatArguments(other._renderBumpFlatArguments),
     _parseFlags(other._parseFlags),
-    _guiDeclName(other._guiDeclName)
+    _guiDeclName(other._guiDeclName),
+    _frobStageType(other._frobStageType)
 {
     _editorTex = other._editorTex ? MapExpression::createForString(other._editorTex->getExpressionString()) : MapExpressionPtr();
+    _frobStageMapExpression = other._frobStageMapExpression ? 
+        MapExpression::createForString(other._frobStageMapExpression->getExpressionString()) : MapExpressionPtr();
+
+    _frobStageRgbParameter[0] = other._frobStageRgbParameter[0];
+    _frobStageRgbParameter[1] = other._frobStageRgbParameter[1];
 
     _ambientRimColour[0] = other._ambientRimColour[0];
     _ambientRimColour[1] = other._ambientRimColour[1];
@@ -109,6 +115,47 @@ void ShaderTemplate::setDecalInfo(const Material::DecalInfo& info)
     {
         _parseFlags |= Material::PF_HasDecalInfo;
     }
+
+    onTemplateChanged();
+}
+
+void ShaderTemplate::setFrobStageType(Material::FrobStageType type)
+{
+    ensureParsed();
+
+    _frobStageType = type;
+
+    onTemplateChanged();
+}
+
+void ShaderTemplate::setFrobStageMapExpressionFromString(const std::string& expr)
+{
+    ensureParsed();
+
+    if (!expr.empty())
+    {
+        _frobStageMapExpression = MapExpression::createForString(expr);
+    }
+    else
+    {
+        _frobStageMapExpression.reset();
+    }
+
+    onTemplateChanged();
+}
+
+void ShaderTemplate::setFrobStageParameter(std::size_t index, double value)
+{
+    setFrobStageRgbParameter(index, Vector3(value, value, value));
+}
+
+void ShaderTemplate::setFrobStageRgbParameter(std::size_t index, const Vector3& value)
+{
+    if (index > 1) throw std::out_of_range("Index must be 0 or 1");
+
+    ensureParsed();
+
+    _frobStageRgbParameter[index] = value;
 
     onTemplateChanged();
 }
@@ -1131,6 +1178,57 @@ bool ShaderTemplate::parseMaterialType(parser::DefTokeniser& tokeniser, const st
     return false;
 }
 
+bool ShaderTemplate::parseFrobstageKeywords(parser::DefTokeniser& tokeniser, const std::string& token)
+{
+    if (!string::starts_with(token, "frobstage_")) return false;
+
+    auto suffix = token.substr(10);
+
+    if (suffix == "texture")
+    {
+        _frobStageType = Material::FrobStageType::Texture;
+        _frobStageMapExpression = MapExpression::createForToken(tokeniser);
+        _frobStageRgbParameter[0] = parseScalarOrVector3(tokeniser);
+        _frobStageRgbParameter[1] = parseScalarOrVector3(tokeniser);
+        return true;
+    }
+
+    if (suffix == "diffuse")
+    {
+        _frobStageType = Material::FrobStageType::Diffuse;
+        _frobStageRgbParameter[0] = parseScalarOrVector3(tokeniser);
+        _frobStageRgbParameter[1] = parseScalarOrVector3(tokeniser);
+        return true;
+    }
+    
+    if (suffix == "none")
+    {
+        _frobStageType = Material::FrobStageType::NoFrobStage;
+        return true;
+    }
+
+    return false;
+}
+
+Vector3 ShaderTemplate::parseScalarOrVector3(parser::DefTokeniser& tokeniser)
+{
+    auto token = tokeniser.nextToken();
+
+    if (token == "(") // vector
+    {
+        auto x = string::convert<Vector3::ElementType>(tokeniser.nextToken());
+        auto y = string::convert<Vector3::ElementType>(tokeniser.nextToken());
+        auto z = string::convert<Vector3::ElementType>(tokeniser.nextToken());
+        tokeniser.assertNextToken(")");
+
+        return Vector3(x, y, z);
+    }
+
+    // scalar
+    auto value = string::convert<Vector3::ElementType>(token);
+    return Vector3(value, value, value);
+}
+
 bool ShaderTemplate::parseSurfaceFlags(parser::DefTokeniser& tokeniser,
                                        const std::string& token)
 {
@@ -1214,6 +1312,7 @@ void ShaderTemplate::clear()
     _layers.clear();
     _currentLayer.reset(new Doom3ShaderLayer(*this));
 
+    description.clear();
     _suppressChangeSignal = false;
     _lightFalloffCubeMapType = IShaderLayer::MapType::Map;
     fogLight = false;
@@ -1231,6 +1330,10 @@ void ShaderTemplate::clear()
     _polygonOffset = 0.0f;
     _coverage = Material::MC_UNDETERMINED;
     _parseFlags = 0;
+    _frobStageType = Material::FrobStageType::Default;
+    _frobStageMapExpression.reset();
+    _frobStageRgbParameter[0].set(0, 0, 0);
+    _frobStageRgbParameter[1].set(0, 0, 0);
     
     _decalInfo.stayMilliSeconds = 0;
     _decalInfo.fadeMilliSeconds = 0;
@@ -1276,6 +1379,7 @@ void ShaderTemplate::parseFromTokens(parser::DefTokeniser& tokeniser)
                     if (parseBlendShortcuts(tokeniser, token)) continue;
                     if (parseSurfaceFlags(tokeniser, token)) continue;
                     if (parseMaterialType(tokeniser, token)) continue;
+                    if (parseFrobstageKeywords(tokeniser, token)) continue;
 
                     rWarning() << "Material keyword not recognised: " << token << std::endl;
 
@@ -1533,6 +1637,8 @@ std::string ShaderTemplate::generateSyntax()
 
 void ShaderTemplate::onSyntaxBlockAssigned(const decl::DeclarationBlockSyntax& block)
 {
+    EditableDeclaration<IShaderTemplate>::onSyntaxBlockAssigned(block);
+
     // Don't call onTemplateChanged() since that is meant is to be used
     // when the template is modified after parsing
     // Just emit the template changed signal
