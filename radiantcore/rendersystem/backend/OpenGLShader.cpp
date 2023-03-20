@@ -608,8 +608,13 @@ void OpenGLShader::constructEditorPreviewPassFromMaterial()
     // Set up blend properties
     determineBlendModeForEditorPass(previewPass, previewPass.stage0);
 
+    // BEGIN BLENDO - Don't mess with the stage colour here so we see it in preview
+    // Set the GL color to white
+    //previewPass.setColour(Colour4::WHITE());
+
     // For the editor preview pass we always ignore the evaluated colour of the material stage
-    previewPass.ignoreStageColour = true;
+    //previewPass.ignoreStageColour = true;
+    // END BLENDO
 
     // Sort position
     if (_material->getSortRequest() >= Material::SORT_DECAL)
