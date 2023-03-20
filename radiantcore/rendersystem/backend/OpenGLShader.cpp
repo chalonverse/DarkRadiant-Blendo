@@ -592,6 +592,8 @@ void OpenGLShader::constructEditorPreviewPassFromMaterial()
     previewPass.setRenderFlag(RENDER_DEPTHTEST);
     previewPass.setRenderFlag(RENDER_LIGHTING);
     previewPass.setRenderFlag(RENDER_SMOOTH);
+    // This is always set but has to be matched by the global render flags to take effect
+    previewPass.setRenderFlag(RENDER_FORCE_STAGE_COLOUR);
 
 	// Don't let translucent materials write to the depth buffer
 	if (!(_material->getMaterialFlags() & Material::FLAG_TRANSLUCENT))
@@ -608,7 +610,8 @@ void OpenGLShader::constructEditorPreviewPassFromMaterial()
     // Set up blend properties
     determineBlendModeForEditorPass(previewPass, previewPass.stage0);
 
-    // For the editor preview pass we always ignore the evaluated colour of the material stage
+    // For the editor preview pass we by default ignore the evaluated colour of the material stage
+    // However, this can be overridden if RENDER_FORCE_STAGE_COLOUR is also set on the global render flags
     previewPass.ignoreStageColour = true;
 
     // Sort position

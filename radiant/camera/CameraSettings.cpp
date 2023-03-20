@@ -24,7 +24,8 @@ CameraSettings::CameraSettings() :
 	_solidSelectionBoxes(registry::getValue<bool>(RKEY_SOLID_SELECTION_BOXES)),
 	_toggleFreelook(registry::getValue<bool>(RKEY_TOGGLE_FREE_MOVE)),
     _gridEnabled(registry::getValue<bool>(RKEY_CAMERA_GRID_ENABLED)),
-    _gridSpacing(registry::getValue<int>(RKEY_CAMERA_GRID_SPACING))
+    _gridSpacing(registry::getValue<int>(RKEY_CAMERA_GRID_SPACING)),
+    _colorInFullBright(registry::getValue<bool>(RKEY_CAMERA_COLOR_IN_FULL_BRIGHT))
 {
 	// Constrain the cubic scale to a fixed value
 	if (_cubicScale > MAX_CUBIC_SCALE) {
@@ -54,6 +55,7 @@ CameraSettings::CameraSettings() :
 	observeKey(RKEY_TOGGLE_FREE_MOVE);
 	observeKey(RKEY_CAMERA_GRID_ENABLED);
 	observeKey(RKEY_CAMERA_GRID_SPACING);
+    observeKey(RKEY_CAMERA_COLOR_IN_FULL_BRIGHT);
 
 	// greebo: Add the preference settings
 	constructPreferencePage();
@@ -97,6 +99,8 @@ void CameraSettings::constructPreferencePage()
         gridSpacings.push_back(string::to_string(i));
     }
     page.appendCombo(_("Grid spacing"), RKEY_CAMERA_GRID_SPACING, gridSpacings, true);
+
+    page.appendCheckBox(_("Show stage color (full bright texture mode)"), RKEY_CAMERA_COLOR_IN_FULL_BRIGHT);
 }
 
 bool CameraSettings::showCameraToolbar() const
@@ -118,6 +122,11 @@ bool CameraSettings::gridEnabled() const
 int CameraSettings::gridSpacing() const
 {
     return _gridSpacing;
+}
+
+bool CameraSettings::colorInFullBright() const
+{
+    return _colorInFullBright;
 }
 
 void CameraSettings::importDrawMode(const int mode)
@@ -176,6 +185,7 @@ void CameraSettings::keyChanged()
 	_solidSelectionBoxes = registry::getValue<bool>(RKEY_SOLID_SELECTION_BOXES);
     _gridEnabled = registry::getValue<bool>(RKEY_CAMERA_GRID_ENABLED);
     _gridSpacing = registry::getValue<int>(RKEY_CAMERA_GRID_SPACING);
+    _colorInFullBright = registry::getValue<bool>(RKEY_CAMERA_COLOR_IN_FULL_BRIGHT);
 
 	// Determine the draw mode represented by the integer registry value
 	importDrawMode(registry::getValue<int>(RKEY_DRAWMODE));

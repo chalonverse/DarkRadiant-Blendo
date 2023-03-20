@@ -109,6 +109,8 @@ const unsigned RENDER_BUMP = 1 << 19;
 const unsigned RENDER_PROGRAM = 1 << 20;
 
 const unsigned RENDER_OVERRIDE = 1 << 21;
+
+const unsigned RENDER_FORCE_STAGE_COLOUR = 1 << 22;
 typedef unsigned RenderStateFlags;
 ///@}
 

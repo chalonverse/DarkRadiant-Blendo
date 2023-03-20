@@ -35,6 +35,7 @@ namespace
     const std::string RKEY_CAMERA_FONT_STYLE = RKEY_CAMERA_ROOT + "/fontStyle";
     const std::string RKEY_CAMERA_GRID_ENABLED = RKEY_CAMERA_ROOT + "/gridEnabled";
     const std::string RKEY_CAMERA_GRID_SPACING = RKEY_CAMERA_ROOT + "/gridSpacing";
+    const std::string RKEY_CAMERA_COLOR_IN_FULL_BRIGHT = RKEY_CAMERA_ROOT + "/colorInFullBright";
 }
 
 inline float calculateFarPlaneDistance(int cubicScale)
@@ -72,6 +73,8 @@ class CameraSettings: public sigc::trackable
 	bool _gridEnabled;
 	int _gridSpacing;
 
+    bool _colorInFullBright;
+
     // Signals
     sigc::signal<void> _sigRenderModeChanged;
 
@@ -97,6 +100,8 @@ public:
 
     bool gridEnabled() const;
     int gridSpacing() const;
+
+    bool colorInFullBright() const;
 
 	// Sets/returns the draw mode (wireframe, solid, textured, lighting)
 	CameraDrawMode getRenderMode() const;

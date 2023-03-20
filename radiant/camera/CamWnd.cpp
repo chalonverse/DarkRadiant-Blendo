@@ -800,6 +800,11 @@ void CamWnd::Cam_Draw()
                                 | RENDER_SMOOTH
                                 | RENDER_SCALED;
 
+            if (getCameraSettings()->colorInFullBright())
+            {
+                allowedRenderFlags |= RENDER_FORCE_STAGE_COLOUR;
+            }
+
             break;
 
         case RENDER_MODE_LIGHTING:

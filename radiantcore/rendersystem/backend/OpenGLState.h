@@ -455,7 +455,7 @@ public:
 
         // Set the GL colour. Do this unconditionally, since setting glColor is
         // cheap and it avoids problems with leaked colour states.
-        if (stage0 && !ignoreStageColour)
+        if (stage0 && (!ignoreStageColour || requiredState & RENDER_FORCE_STAGE_COLOUR))
         {
             setColour(stage0->getColour());
         }
