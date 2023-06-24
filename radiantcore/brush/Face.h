@@ -50,6 +50,8 @@ private:
 	TextureProjection _texdef;
 	TextureProjection m_texdefTransformed;
 
+    // BLENDO: Save the original winding prior to transform
+    Winding _windingOriginal;
 	Winding m_winding;
 	Vector3 m_centroid;
 

@@ -266,19 +266,26 @@ void Face::setRenderSystem(const RenderSystemPtr& renderSystem)
 
 void Face::transformTexDefLocked(const Matrix4& transform)
 {
+    // BLENDO: Use original winding rather than incrementally updated winding
+    if (_windingOriginal.size() < 3)
+    {
+        _windingOriginal = m_winding;
+    }
+
     Vector3 vertices[3] =
     {
-        m_winding[0].vertex,
-        m_winding[1].vertex,
-        m_winding[2].vertex
+        _windingOriginal[0].vertex,
+        _windingOriginal[1].vertex,
+        _windingOriginal[2].vertex
     };
 
     Vector2 texcoords[3] =
     {
-        m_winding[0].texcoord,
-        m_winding[1].texcoord,
-        m_winding[2].texcoord
+        _windingOriginal[0].texcoord,
+        _windingOriginal[1].texcoord,
+        _windingOriginal[2].texcoord
     };
+    // END BLENDO
 
     // Transform the vertices
     vertices[0] = transform.transformPoint(vertices[0]);
@@ -342,6 +349,8 @@ void Face::freezeTransform()
     planepts_assign(m_move_planepts, m_move_planeptsTransformed);
     _texdef = m_texdefTransformed;
     updateWinding();
+    // BLENDO: Clear original winding so it will update again the next time a transform starts
+    _windingOriginal.clear();
 }
 
 void Face::clearRenderables()
