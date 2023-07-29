@@ -209,6 +209,8 @@ public:
 
     void setRenderState(RenderState state) override;
 
+    const ColourKey& getColourKey() const { return _colourKey; }
+
 protected:
     const ShaderPtr& getInactiveShader();
 

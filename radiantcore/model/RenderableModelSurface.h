@@ -2,6 +2,7 @@
 
 #include "imodelsurface.h"
 #include "render/RenderableSurface.h"
+#include "entity/EntityNode.h"
 
 namespace model
 {
@@ -84,6 +85,14 @@ public:
     {
         return _entity != nullptr && _entity->isShadowCasting();
     }
+
+    // BLENDO BEGIN: Color for models in full bright
+    Vector4 getColour()
+    {
+        const entity::EntityNode* ent = dynamic_cast<const entity::EntityNode*>(_entity);
+        return !ent ? Vector4(1.0, 1.0, 1.0, 1.0) : ent->getColourKey().getColour();
+    }
+    // BLENDO END
 };
 
 }

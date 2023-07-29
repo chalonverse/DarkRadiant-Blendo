@@ -4,6 +4,7 @@
 #include "irenderableobject.h"
 #include "math/Matrix4.h"
 #include "render/RenderVertex.h"
+#include "model/RenderableModelSurface.h"
 
 namespace render
 {
@@ -14,6 +15,14 @@ ObjectRenderer::ObjectRenderer(IGeometryStore& store) :
 
 void ObjectRenderer::submitObject(IRenderableObject& object)
 {
+    // BLENDO BEGIN: Color for models in full bright
+    model::RenderableModelSurface* model = dynamic_cast<model::RenderableModelSurface*>(&object);
+    if (model)
+    {
+        Colour4 colour = model->getColour();
+        glColor4fv(colour);
+    }
+    // BLENDO END
     // Orient the object
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
