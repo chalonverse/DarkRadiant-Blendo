@@ -36,6 +36,9 @@ class DefTokeniserFunc
     // List of delimiters to keep
     const char* _keptDelims;
 
+    // BLENDO: Whether \\n, \\t, \\" should be replaced with \n etc
+    bool _replaceEscapeChars;
+
     // Test if a character is a delimiter
     bool isDelim(char c) {
         const char* curDelim = _delims;
@@ -62,8 +65,8 @@ class DefTokeniserFunc
 public:
 
     // Constructor
-    DefTokeniserFunc(const char* delims, const char* keptDelims)
-    : _state(SEARCHING), _delims(delims), _keptDelims(keptDelims)
+    DefTokeniserFunc(const char* delims, const char* keptDelims, bool replaceEscapeChars = true)
+    : _state(SEARCHING), _delims(delims), _keptDelims(keptDelims), _replaceEscapeChars(replaceEscapeChars)
     {}
 
     /* REQUIRED. Operator() is called by the tokeniser. This function
@@ -151,7 +154,7 @@ public:
 						_state = AFTER_CLOSING_QUOTE;
                         continue;
                     }
-					else if (*next == '\\')
+					else if (*next == '\\' && _replaceEscapeChars)
 					{
 						// Escape found, check next character
 						++next;
@@ -555,10 +558,11 @@ public:
      */
     BasicDefTokeniser(std::istream& str,
                       const char* delims = WHITESPACE,
-                      const char* keptDelims = "{}(),")
+                      const char* keptDelims = "{}(),",
+                      bool replaceEscapeChars = true)
     : _tok(CharStreamIterator(setNoskipws(str)), // start iterator
            CharStreamIterator(), // end (null) iterator
-           DefTokeniserFunc(delims, keptDelims)),
+           DefTokeniserFunc(delims, keptDelims, replaceEscapeChars)),
       _tokIter(_tok.getIterator())
     { }
 

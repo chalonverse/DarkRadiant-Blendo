@@ -30,7 +30,10 @@ void Doom3MapReader::readFromStream(std::istream& stream)
 	initPrimitiveParsers();
 
 	// The tokeniser used to split the stream into pieces
-	parser::BasicDefTokeniser<std::istream> tok(stream);
+	//parser::BasicDefTokeniser<std::istream> tok(stream);
+    // BLENDO: Added to prevent \\n etc from being converted to \n
+    constexpr const char* const WHITESPACE = " \t\n\v\r";
+    parser::BasicDefTokeniser<std::istream> tok(stream, WHITESPACE, "{}()", false);
 
 	// Try to parse the map version (throws on failure)
 	parseMapVersion(tok);
